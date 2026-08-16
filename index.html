@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>START 檢傷分類全能特訓 App</title>
+    <style>
+        :root {
+            --red: #e74c3c;
+            --yellow: #f1c40f;
+            --green: #2ecc71;
+            --black: #34495e;
+            --bg-color: #f5f6fa;
+            --text-color: #2c3e50;
+            --primary: #3498db;
+            --nav-bg: #ffffff;
+        }
+
+        body {
+            margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif, 'Microsoft JhengHei';
+            background-color: var(--bg-color); color: var(--text-color); display: flex; flex-direction: column;
+            height: 100vh; overflow: hidden;
+        }
+
+        /* 頂部導覽列 */
+        header {
+            background-color: #2c3e50; color: white; padding: 15px; text-align: center;
+            font-size: 1.2rem; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.1); flex-shrink: 0; z-index: 10;
+        }
+
+        #main-content { flex: 1; overflow-y: auto; position: relative; background-color: var(--bg-color); scroll-behavior: smooth; }
+        .view-section { display: none; padding: 15px; max-width: 800px; margin: 0 auto; box-sizing: border-box; min-height: 100%; }
+        .view-active { display: block; animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* ================= Q版圖示區 ================= */
+        .q-graphics-row { display: flex; justify-content: space-around; align-items: flex-end; margin-bottom: 20px; background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .q-character { text-align: center; transition: transform 0.2s; }
+        .q-character:hover { transform: scale(1.1); }
+        .q-character span { display: block; font-size: 0.85rem; font-weight: bold; margin-top: 5px; color: #34495e; }
+
+        /* ================= 互動式教學區塊 ================= */
+        .teaching-content { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); line-height: 1.6; margin-bottom: 20px; }
+        .teaching-content h2 { color: var(--primary); border-bottom: 2px solid #ecf0f1; padding-bottom: 5px; margin-top: 0; }
+        .teaching-content ul { padding-left: 20px; font-size: 1.1rem; }
+        .teaching-content li { margin-bottom: 12px; }
+        
+        .interactive-box { background: #f8f9fa; border: 2px dashed #bdc3c7; border-radius: 10px; padding: 15px; margin: 15px 0; }
+        .interactive-step { display: none; animation: fadeIn 0.4s; }
+        .interactive-active { display: block; }
+        .inter-question { font-size: 1.2rem; font-weight: bold; color: #2c3e50; margin-bottom: 15px; text-align: center; }
+        .inter-options { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;}
+        .inter-btn { padding: 12px 15px; border: none; border-radius: 8px; font-size: 1.1rem; font-weight: bold; cursor: pointer; background: var(--primary); color: white; flex: 1; min-width: 120px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .inter-btn:active { transform: scale(0.95); }
+        .inter-result { text-align: center; font-size: 1.4rem; font-weight: bold; padding: 20px; border-radius: 8px; margin-top: 10px; color: white; display: none; }
+        .inter-reset { display: block; margin: 15px auto 0; background: #95a5a6; padding: 8px 15px; border: none; border-radius: 5px; color: white; cursor: pointer; font-size: 1rem;}
+
+        .highlight-box { background: #fff3cd; padding: 15px; border-left: 4px solid #f1c40f; border-radius: 4px; margin: 10px 0; display: flex; align-items: center; gap: 15px;}
+        .red-box { background: #fdedec; padding: 15px; border-left: 4px solid var(--red); border-radius: 4px; margin: 10px 0; display: flex; align-items: center; gap: 15px;}
+        .black-box { background: #ebedef; padding: 15px; border-left: 4px solid var(--black); border-radius: 4px; margin: 10px 0; display: flex; align-items: center; gap: 15px;}
+        
+        .box-text-content { flex: 1; }
+
+        /* ================= 遊戲區塊樣式 ================= */
+        .mode-title { text-align: center; font-weight: bold; font-size: 1.2rem; margin-bottom: 10px; color: var(--primary); display: flex; justify-content: center; align-items: center; gap: 10px;}
+        .test-mode-title { color: var(--red); }
+
+        .patient-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 15px; border-left: 6px solid var(--primary); }
+        .patient-card h3 { margin-top: 0; color: #34495e; border-bottom: 2px solid #ecf0f1; padding-bottom: 8px; font-size: 1.2rem; display: flex; justify-content: space-between; align-items: center; }
+        .patient-tag { font-size: 0.9rem; background: #ecf0f1; padding: 3px 8px; border-radius: 12px; color: #7f8c8d; }
+        .patient-details { font-size: 1.15rem; line-height: 1.7; }
+        .patient-details hr { border: 0; height: 1px; background: #ecf0f1; margin: 10px 0; }
+
+        .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 15px; }
+        .btn-group button { padding: 20px 10px; font-size: 1.3rem; font-weight: bold; color: white; border: none; border-radius: 10px; cursor: pointer; box-shadow: 0 3px 5px rgba(0,0,0,0.15); -webkit-tap-highlight-color: transparent; }
+        .btn-group button:active { transform: scale(0.95); }
+        .btn-green { background-color: var(--green); } .btn-yellow { background-color: var(--yellow); color: #2c3e50 !important; } .btn-red { background-color: var(--red); } .btn-black { background-color: var(--black); }
+
+        #feedback-area { text-align: left; font-size: 1.1rem; font-weight: bold; min-height: 80px; margin-bottom: 10px; padding: 12px; border-radius: 8px; background-color: #fff; box-shadow: inset 0 0 5px rgba(0,0,0,0.05); transition: all 0.3s; }
+        .feedback-correct { border-left: 6px solid var(--green); color: #27ae60; background-color: #eafaf1 !important; }
+        .feedback-incorrect { border-left: 6px solid var(--red); color: #c0392b; background-color: #fdedec !important; }
+        .feedback-neutral { border-left: 6px solid #bdc3c7; color: #7f8c8d; }
+        .feedback-fatal { border-left: 6px solid #8e44ad; color: #8e44ad; background-color: #f4ecf7 !important; }
+
+        #progress { text-align: center; color: #7f8c8d; font-size: 0.95rem; font-weight: bold; padding-bottom: 10px; }
+        .analysis-text { display: block; font-size: 1rem; color: #34495e; font-weight: normal; margin-top: 8px; line-height: 1.5; }
+
+        .action-btn { display: none; width: 100%; padding: 18px; font-size: 1.2rem; font-weight: bold; color: white; background-color: var(--primary); border: none; border-radius: 10px; margin-top: 10px; cursor: pointer; }
+        .action-btn-red { background-color: var(--red); }
+
+        /* ================= 底部導覽列 ================= */
+        nav { display: flex; background-color: var(--nav-bg); box-shadow: 0 -2px 10px rgba(0,0,0,0.05); flex-shrink: 0; padding-bottom: env(safe-area-inset-bottom); }
+        .nav-item { flex: 1; text-align: center; padding: 12px 0; color: #7f8c8d; font-size: 0.9rem; cursor: pointer; transition: color 0.2s; border-top: 3px solid transparent; -webkit-tap-highlight-color: transparent; }
+        .nav-item i { display: block; font-size: 1.5rem; margin-bottom: 4px; font-style: normal; }
+        .nav-active { color: var(--primary); border-top: 3px solid var(--primary); font-weight: bold; background: #f0f8ff; }
+
+    </style>
+</head>
+<body>
+
+    <header id="main-header">🚑 START 檢傷分類系統</header>
+
+    <div id="main-content">
+        
+        <!-- ================= 視圖 1：教學指南 ================= -->
+        <div id="view-teaching" class="view-section view-active">
+            
+            <!-- 大量傷病患的意義與宗旨 -->
+            <div class="teaching-content">
+                <h2>🌟 大量傷病患 (MCI) 檢傷宗旨</h2>
+                <div class="highlight-box" style="border-left-color: var(--primary); background: #eaf2f8;">
+                    <b>核心理念：</b>「在最短的時間內，利用有限的資源，救活最多的人！」<br>
+                    <i style="color: #7f8c8d;">(Do the greatest good for the greatest number of people.)</i>
+                </div>
+                <p>當現場<b>「傷患人數與嚴重程度」遠超過「第一線救援資源」</b>時，即構成大量傷病患事件。此時教官要求大家必須立刻轉換平時的急診思維：</p>
+                <ul>
+                    <li><b>快速評估不卡關：</b> 每位傷患僅能停留 30 秒評估，絕不戀戰。</li>
+                    <li><b>最少急救處置：</b> 檢傷當下僅執行「暢通呼吸道」與「控制大血管出血」兩種救命動作。</li>
+                    <li><b>殘酷但必要的妥協：</b> 必須忍痛放棄平時可能救得活、但在災難現場會耗盡全隊資源的極重度傷患 (黑標)，將寶貴的醫療與後送資源，保留給存活率高且極需救治的傷患 (紅標)。</li>
+                </ul>
+            </div>
+
+            <!-- 核心觀念文字講解 -->
+            <div class="teaching-content">
+                <h2>📖 START 檢傷四大步驟 (RPM)</h2>
+                <p>在進入下方互動模擬前，請先熟記<b>「1走、2呼吸、3循環、4意識」</b>的三十秒判斷法則。現場不是急診室，請把時間留給最危急的人！</p>
+                <ul>
+                    <li><b>步驟一 (走)：</b>能聽從廣播自行走動者 ➔ 🟢 <b>綠色 (輕傷)</b></li>
+                    <li><b>步驟二 (R 呼吸)：</b>
+                        <br>▪ <b>無呼吸：</b>暢通氣道 ➔ 若仍無呼吸 ⬛ <b>黑色</b> / 若恢復呼吸 🔴 <b>紅色</b>
+                        <br>▪ <b>有呼吸：</b>測速率，若 <b>>30</b> 或 <b><10</b> 次/分 ➔ 🔴 <b>紅色</b> (若在 10~30 次之間，則進入下一步)
+                    </li>
+                    <li><b>步驟三 (P 循環)：</b>微血管充填時間 (CRT) <b>大於 2秒</b> 或摸不到橈動脈 ➔ 🔴 <b>紅色</b></li>
+                    <li><b>步驟四 (M 意識)：</b>無法遵從簡單指令 ➔ 🔴 <b>紅色</b>。<br>若以上全部過關 ➔ 🟡 <b>黃色 (中度)</b>。</li>
+                </ul>
+            </div>
+
+            <!-- 互動式模擬 -->
+            <div class="teaching-content">
+                <h2>👆 互動式 RPM 模擬特訓</h2>
+                <p style="text-align:center; color:#7f8c8d; font-size:0.95rem;">點擊下方按鈕，體驗大腦思考流程</p>
+                
+                <!-- 互動決策樹 -->
+                <div class="interactive-box" id="inter-box">
+                    <!-- Step 1 -->
+                    <div id="step-1" class="interactive-step interactive-active">
+                        <div class="inter-question">🚶‍♂️ 1. 傷患能自行走動嗎？</div>
+                        <div class="inter-options">
+                            <button class="inter-btn" style="background:#2ecc71;" onclick="showResult('🟢 綠標 (輕傷)', '#2ecc71')">能走動</button>
+                            <button class="inter-btn" style="background:#7f8c8d;" onclick="nextStep(2)">無法走動</button>
+                        </div>
+                    </div>
+                    <!-- Step 2 -->
+                    <div id="step-2" class="interactive-step">
+                        <div class="inter-question">🫁 2. 傷患有呼吸嗎？</div>
+                        <div class="inter-options">
+                            <button class="inter-btn" style="background:#7f8c8d;" onclick="nextStep('2-1')">無呼吸</button>
+                            <button class="inter-btn" style="background:#3498db;" onclick="nextStep('2-2')">有呼吸</button>
+                        </div>
+                    </div>
+                    <!-- Step 2-1 -->
+                    <div id="step-2-1" class="interactive-step">
+                        <div class="inter-question">✋ 2-A 暢通呼吸道 (壓額抬下巴) 後？</div>
+                        <div class="inter-options">
+                            <button class="inter-btn" style="background:#34495e;" onclick="showResult('⬛ 黑標 (死亡)', '#34495e')">仍無呼吸</button>
+                            <button class="inter-btn" style="background:#e74c3c;" onclick="showResult('🔴 紅標 (極危急)', '#e74c3c')">恢復呼吸</button>
+                        </div>
+                    </div>
+                    <!-- Step 2-2 -->
+                    <div id="step-2-2" class="interactive-step">
+                        <div class="inter-question">⏱️ 2-B 測量呼吸次數 (次/分)？</div>
+                        <div class="inter-options">
+                            <button class="inter-btn" style="background:#e74c3c;" onclick="showResult('🔴 紅標 (極危急)', '#e74c3c')">>30 或 <10</button>
+                            <button class="inter-btn" style="background:#3498db;" onclick="nextStep(3)">10 ~ 30 之間</button>
+                        </div>
+                    </div>
+                    <!-- Step 3 -->
+                    <div id="step-3" class="interactive-step">
+                        <div class="inter-question">🩸 3. 循環與灌流 (CRT)？</div>
+                        <div class="inter-options">
+                            <button class="inter-btn" style="background:#e74c3c;" onclick="showResult('🔴 紅標 (極危急)', '#e74c3c')">CRT > 2秒</button>
+                            <button class="inter-btn" style="background:#3498db;" onclick="nextStep(4)">CRT ≤ 2秒</button>
+                        </div>
+                    </div>
+                    <!-- Step 4 -->
+                    <div id="step-4" class="interactive-step">
+                        <div class="inter-question">🧠 4. 意識狀態 (簡單指令)？</div>
+                        <div class="inter-options">
+                            <button class="inter-btn" style="background:#e74c3c;" onclick="showResult('🔴 紅標 (無法遵從指令)', '#e74c3c')">無法遵從指令</button>
+                            <button class="inter-btn" style="background:#f1c40f; color:#2c3e50;" onclick="showResult('🟡 黃標 (中度傷患)', '#f1c40f')">能遵從指令</button>
+                        </div>
+                    </div>
+                    <!-- 結果顯示區 -->
+                    <div id="inter-result" class="inter-result"></div>
+                    <button id="inter-reset" class="inter-reset" style="display:none;" onclick="resetInteractive()">🔄 重新模擬</button>
+                </div>
+            </div>
+
+            <!-- 現場長官特殊規則 -->
+            <div class="teaching-content">
+                <h2>🚨 現場決策特殊例外</h2>
+                
+                <!-- 指揮官紅標鐵律 -->
+                <div class="red-box">
+                    <svg viewBox="0 0 100 100" width="60" height="60" style="flex-shrink:0;">
+                        <circle cx="50" cy="35" r="15" fill="#f1c27d"/>
+                        <path d="M 30 35 Q 50 10 70 35 L 75 35 Q 50 5 25 35 Z" fill="#c0392b"/>
+                        <rect x="35" y="50" width="30" height="35" rx="5" fill="#e74c3c"/>
+                        <path d="M 35 55 L 50 65 L 65 55" stroke="#ffffff" stroke-width="2" fill="none"/>
+                        <text x="50" y="80" font-size="10" text-anchor="middle" fill="#ffffff" font-weight="bold">指揮官</text>
+                    </svg>
+                    <div class="box-text-content">
+                        <b style="color:#c0392b; font-size:1.1rem;">指揮官紅標鐵律：</b><br>
+                        <b>1. 救災救護同仁</b>受傷 (含發出 Mayday)。<br>
+                        <b>2. 孕婦</b> (考量母嬰極高風險)。<br>
+                        以上兩者<b>不論當下傷勢或數據如何，一律直接 🔴 紅標最優先後送</b>！<br>
+                        <i>(其他直升紅標：致命性大動脈出血、吸入性灼傷、張力性氣胸)</i>
+                    </div>
+                </div>
+
+                <!-- 後送官黑標例外 -->
+                <div class="black-box">
+                    <svg viewBox="0 0 100 100" width="60" height="60" style="flex-shrink:0;">
+                        <circle cx="50" cy="35" r="15" fill="#f1c27d"/>
+                        <path d="M 30 35 Q 50 10 70 35 L 75 35 Q 50 5 25 35 Z" fill="#bdc3c7"/> 
+                        <rect x="35" y="50" width="30" height="35" rx="5" fill="#ffffff" stroke="#bdc3c7" stroke-width="1"/>
+                        <path d="M 35 55 L 50 65 L 65 55" stroke="#e67e22" stroke-width="2" fill="none"/>
+                        <text x="50" y="80" font-size="10" text-anchor="middle" fill="#2c3e50" font-weight="bold">後送官</text>
+                    </svg>
+                    <div class="box-text-content">
+                        <b style="color:#34495e; font-size:1.1rem;">打破黑標成規：</b><br>
+                        若是⚡<b>雷擊</b>、🥶<b>極度低溫</b>、剛溺水者，請優先搶救無呼吸者（逆向檢傷），實施急救存活率極高，不可直接放棄！
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= 視圖 2 & 3：測驗/練習遊戲區 ================= -->
+        <div id="view-game" class="view-section">
+            <div id="mode-title-display" class="mode-title">
+                <!-- 檢傷官 Q 版小圖 -->
+                <svg viewBox="0 0 100 100" width="40" height="40" style="vertical-align: middle;">
+                    <circle cx="50" cy="35" r="15" fill="#f1c27d"/>
+                    <path d="M 30 35 Q 50 10 70 35 L 75 35 Q 50 5 25 35 Z" fill="#2c3e50"/> 
+                    <rect x="35" y="50" width="30" height="35" rx="5" fill="#f1c40f"/> 
+                    <path d="M 35 55 L 50 65 L 65 55" stroke="#ffffff" stroke-width="2" fill="none"/>
+                    <text x="50" y="80" font-size="10" text-anchor="middle" fill="#2c3e50" font-weight="bold">檢傷</text>
+                </svg>
+                <span id="mode-text">🏋️ 練習模式 (30題)</span>
+            </div>
+            
+            <div class="patient-card">
+                <h3>📝 傷患資訊 <span class="patient-tag" id="patient-id">Case #01</span></h3>
+                <div class="patient-details" id="card-content">載入中...</div>
+            </div>
+
+            <div id="feedback-area" class="feedback-neutral">請點擊下方按鈕進行判斷。</div>
+
+            <div class="btn-group" id="answer-buttons">
+                <button class="btn-green" onclick="checkAnswer('綠')">🟢 綠標</button>
+                <button class="btn-yellow" onclick="checkAnswer('黃')">🟡 黃標</button>
+                <button class="btn-red" onclick="checkAnswer('紅')">🔴 紅標</button>
+                <button class="btn-black" onclick="checkAnswer('黑')">⬛ 黑標</button>
+            </div>
+            
+            <button id="action-btn-restart" class="action-btn" onclick="startCurrentMode()">🔄 重新開始</button>
+
+            <div id="progress">進度: 0 / 0 | 答對: 0</div>
+        </div>
+
+    </div>
+
+    <!-- 底部導覽列 -->
+    <nav>
+        <div class="nav-item nav-active" onclick="switchTab('teaching', this)">
+            <i>📖</i>教學指南
+        </div>
+        <div class="nav-item" onclick="switchTab('practice', this)">
+            <i>🏋️</i>練習模式
+        </div>
+        <div class="nav-item" onclick="switchTab('test', this)">
+            <i>🚨</i>嚴格測驗
+        </div>
+    </nav>
+
+    <script>
+        // ================= 互動式教學邏輯 =================
+        function nextStep(stepId) {
+            document.querySelectorAll('.interactive-step').forEach(el => el.classList.remove('interactive-active'));
+            document.getElementById('step-' + stepId).classList.add('interactive-active');
+        }
+        function showResult(text, color) {
+            document.querySelectorAll('.interactive-step').forEach(el => el.classList.remove('interactive-active'));
+            const resBox = document.getElementById('inter-result');
+            resBox.style.display = 'block';
+            resBox.style.backgroundColor = color;
+            resBox.style.color = (color === '#f1c40f') ? '#2c3e50' : 'white';
+            resBox.innerText = '決策結果：' + text;
+            document.getElementById('inter-reset').style.display = 'block';
+        }
+        function resetInteractive() {
+            document.getElementById('inter-result').style.display = 'none';
+            document.getElementById('inter-reset').style.display = 'none';
+            nextStep(1);
+        }
+
+        // ================= 題庫資料 =================
+        const pools = {
+            green: [
+                { desc: "<b>47歲，男性</b><br><hr><b>行走：</b> 可行走<br><b>意識：</b> 清楚，表情痛苦<br><b>傷勢：</b> 右上臂開放性骨折<br><b>循環：</b> CRT 1秒<br><b>呼吸：</b> 14 次/分", ans: "綠", reason: "可行走！不論傷勢多嚇人，能走就是綠色。" },
+                { desc: "<b>10歲，男性</b><br><hr><b>行走：</b> 可行走<br><b>意識：</b> 活動正常，言語清楚<br><b>傷勢：</b> 左前臂腫脹、瘀青<br><b>循環：</b> CRT 1秒<br><b>呼吸：</b> 16 次/分", ans: "綠", reason: "能自行走動，直接歸類輕傷區。" },
+                { desc: "<b>90歲，女性</b><br><hr><b>行走：</b> 可行走<br><b>意識：</b> 清楚<br><b>傷勢：</b> 顏面擦傷<br><b>循環：</b> CRT 2秒<br><b>呼吸：</b> 24 次/分", ans: "綠", reason: "不受高齡影響，能走動即判定為綠色。" },
+                { desc: "<b>18歲，男性</b><br><hr><b>行走：</b> 可行走<br><b>意識：</b> 清楚<br><b>傷勢：</b> 右肩脫臼，多處擦傷<br><b>循環：</b> CRT 2秒<br><b>呼吸：</b> 36 次/分", ans: "綠", reason: "只要能走動，呼吸偏快也直接判定綠色。" },
+                { desc: "<b>60歲，女性</b><br><hr><b>行走：</b> 可行走<br><b>意識：</b> 清楚，受驚嚇<br><b>傷勢：</b> 四肢多處擦傷<br><b>循環：</b> 橈動脈強<br><b>呼吸：</b> 36 次/分", ans: "綠", reason: "能行走者一律先劃分綠色區塊。" }
+            ],
+            yellow: [
+                { desc: "<b>50歲，男性</b><br><hr><b>行走：</b> 無法行走<br><b>意識：</b> 清楚<br><b>傷勢：</b> 腹部鈍傷<br><b>循環：</b> CRT 1秒<br><b>呼吸：</b> 24 次/分", ans: "黃", reason: "無法走 ➔ R(正常) ➔ P(正常) ➔ M(清楚)。判定黃色。" },
+                { desc: "<b>40歲，女性</b><br><hr><b>行走：</b> 無法行走<br><b>意識：</b> 清楚<br><b>傷勢：</b> 兩側上肢18%二度灼傷<br><b>循環：</b> 橈動脈正常<br><b>呼吸：</b> 18 次/分", ans: "黃", reason: "無法走 ➔ R(正常) ➔ P(正常) ➔ M(清楚)。判定黃色。" },
+                { desc: "<b>70歲，女性</b><br><hr><b>行走：</b> 無法行走<br><b>意識：</b> 清楚<br><b>傷勢：</b> 雙下肢閉鎖性骨折<br><b>循環：</b> 足背動脈正常<br><b>呼吸：</b> 18 次/分", ans: "黃", reason: "無法走 ➔ RPM皆過關。判定延遲處置(黃色)。" },
+                { desc: "<b>30歲，女性</b><br><hr><b>行走：</b> 無法行走<br><b>意識：</b> 清楚，皮膚濕冷<br><b>傷勢：</b> 骨盆腔骨折<br><b>循環：</b> 橈動脈正常<br><b>呼吸：</b> 26 次/分", ans: "黃", reason: "無法走 ➔ 呼吸<30 ➔ 循環正常 ➔ 意識清楚能遵從指令。" },
+                { desc: "<b>35歲，男性</b><br><hr><b>行走：</b> 無法行走<br><b>意識：</b> 清楚<br><b>傷勢：</b> 左前臂撕裂傷<br><b>循環：</b> 橈動脈正常<br><b>呼吸：</b> 12 次/分", ans: "黃", reason: "無法走 ➔ R正常 ➔ P正常 ➔ M正常。判定黃色。" },
+                { desc: "<b>15歲，男性</b><br><hr><b>行走：</b> 無法行走<br><b>意識：</b> 清楚<br><b>傷勢：</b> 雙下肢嚴重骨折<br><b>循環：</b> 橈動脈正常<br><b>呼吸：</b> 20 次/分", ans: "黃", reason: "無法走 ➔ R正常 ➔ P正常 ➔ M正常。判定黃色。" }
+            ],
+            redNormal: [
+                { desc: "<b>50歲，男性</b><br><hr><b>行走：</b> 無法行走<br><b>意識：</b> 意識模糊<br><b>傷勢：</b> 腹部開放性傷口<br><b>循環：</b> CRT 1秒<br><b>呼吸：</b> 24 次/分", ans: "紅", reason: "無法走 ➔ R正常 ➔ P正常 ➔ <b>M(意識模糊無法遵從指令)</b>。判定紅色。" },
+                { desc: "<b>80歲，女性</b><br><hr><b>行走：</b> 無法行走<br><b>意識：</b> 意識模糊<br><b>傷勢：</b> 胸部嚴重鈍傷<br><b>循環：</b> 橈動脈微弱，CRT 4秒<br><b>呼吸：</b> 8 次/分", ans: "紅", reason: "無法走 ➔ <b>呼吸小於 10 次/分</b>。直接給紅標。" },
+                { desc: "<b>40歲，女性</b><br><hr><b>行走：</b> 無法行走<br><b>意識：</b> 清楚，臉色蒼白<br><b>傷勢：</b> 右大腿開放性骨折<br><b>循環：</b> CRT 1秒<br><b>呼吸：</b> 36 次/分", ans: "紅", reason: "無法走 ➔ <b>呼吸大於 30 次/分</b>。判定紅色。" },
+                { desc: "<b>20歲，男性</b><br><hr><b>行走：</b> 無法行走<br><b>意識：</b> 模糊，冒冷汗<br><b>傷勢：</b> 右下肢開放骨折<br><b>循環：</b> CRT 2秒<br><b>呼吸：</b> 35 次/分", ans: "紅", reason: "無法走 ➔ <b>呼吸大於 30 次/分</b>。直接給紅標。" },
+                { desc: "<b>15歲，男性</b><br><hr><b>行走：</b> 無法行走<br><b>意識：</b> 模糊<br><b>傷勢：</b> 胸腹嚴重鈍傷<br><b>循環：</b> CRT 1秒<br><b>呼吸：</b> 24 次/分", ans: "紅", reason: "無法走 ➔ R正常 ➔ P正常 ➔ <b>M(意識模糊)</b>。判定紅色。" },
+                { desc: "<b>70歲，女性</b><br><hr><b>行走：</b> 無法行走<br><b>意識：</b> 清楚，表情痛苦<br><b>傷勢：</b> 下腹部嚴重壓傷<br><b>循環：</b> CRT 4秒<br><b>呼吸：</b> 35 次/分", ans: "紅", reason: "無法走 ➔ <b>呼吸>30 且 CRT>2秒</b>。雙重危急，判定紅色。" },
+                { desc: "<b>10歲，男性</b><br><hr><b>行走：</b> 無法行走<br><b>意識：</b> 反應遲鈍<br><b>傷勢：</b> 右大腿開放骨折<br><b>循環：</b> CRT 3秒<br><b>呼吸：</b> 24 次/分", ans: "紅", reason: "無法走 ➔ R正常 ➔ <b>P(CRT > 2秒)</b>。判定紅色。" }
+            ],
+            redSpecial: [
+                { desc: "<b>26歲，女性 (孕婦)</b><br><hr><b>行走：</b> 可行走<br><b>意識：</b> 清楚，驚嚇哭泣<br><b>傷勢：</b> 手腳多處輕微擦傷<br><b>循環：</b> CRT 1秒<br><b>呼吸：</b> 20 次/分", ans: "紅", reason: "【鐵律陷阱】雖然能走且數據正常，但孕婦一屍兩命風險極高，不論傷勢一律直接 🔴 標紅！" },
+                { desc: "<b>28歲，孕婦 (20週)</b><br><hr><b>行走：</b> 無法行走<br><b>意識：</b> 清楚，皮膚濕冷<br><b>傷勢：</b> 腹部嚴重鈍傷<br><b>循環：</b> 橈動脈正常<br><b>呼吸：</b> 26 次/分", ans: "紅", reason: "【特殊紅標】孕婦遭遇外傷極易引發胎盤早期剝離，不需管 RPM 數據，直接給予紅標！" },
+                { desc: "<b>35歲，男性 (消防員)</b><br><hr><b>行走：</b> 無法行走<br><b>意識：</b> 清楚<br><b>傷勢：</b> 火場搜救遭砸傷腿部<br><b>循環：</b> 橈動脈正常<br><b>呼吸：</b> 22 次/分", ans: "紅", reason: "【特殊紅標】救災救護同仁受傷，一律列為紅色優先後送！" },
+                { desc: "<b>50歲，女性</b><br><hr><b>行走：</b> 無法行走<br><b>意識：</b> 清楚<br><b>傷勢：</b> 鼻毛燒焦、吐黑痰<br><b>循環：</b> 橈動脈正常<br><b>呼吸：</b> 20 次/分", ans: "紅", reason: "【特殊紅標】吸入性灼傷，氣道隨時閉鎖，必須直接標紅。" },
+                { desc: "<b>28歲，男性</b><br><hr><b>行走：</b> 無法行走<br><b>意識：</b> 模糊<br><b>傷勢：</b> 大腿動脈鮮血噴射<br><b>循環：</b> 摸不到橈動脈<br><b>呼吸：</b> 28 次/分", ans: "紅", reason: "【特殊紅標】致命性大出血。立刻上止血帶並標紅！" },
+                { desc: "<b>40歲，女性</b><br><hr><b>行走：</b> 無法行走<br><b>意識：</b> 清楚<br><b>傷勢：</b> 頸靜脈怒張，氣管偏移<br><b>循環：</b> 橈動脈微弱<br><b>呼吸：</b> 35 次/分", ans: "紅", reason: "【特殊紅標】疑似張力性氣胸。立刻休克高風險，直接標紅。" }
+            ],
+            blackNormal: [
+                { desc: "<b>47歲，男性</b><br><hr><b>行走：</b> 無法行走<br><b>意識：</b> 無意識<br><b>傷勢：</b> 外觀無明顯致命傷<br><b>循環：</b> 無脈搏<br><b>呼吸：</b> <b>無呼吸</b> (暢通氣道後仍無)", ans: "黑", reason: "無法行走 ➔ 無呼吸。暢通氣道後若仍無自主呼吸，判定黑色。" },
+                { desc: "<b>60歲，女性</b><br><hr><b>行走：</b> 無法行走<br><b>意識：</b> 喪失<br><b>傷勢：</b> 腹部破裂，內臟拖出<br><b>循環：</b> 無脈搏<br><b>呼吸：</b> <b>無呼吸</b>", ans: "黑", reason: "重大致命創傷且無生命徵象，不予實施CPR，判定黑色。" },
+                { desc: "<b>50歲，男性</b><br><hr><b>行走：</b> 無法行走<br><b>意識：</b> 喪失<br><b>傷勢：</b> 頭部嚴重變形，腦漿外溢<br><b>循環：</b> 無脈搏<br><b>呼吸：</b> <b>無呼吸</b>", ans: "黑", reason: "明顯不符合生存條件之創傷，判定黑色。" },
+                { desc: "<b>18歲，男性</b><br><hr><b>行走：</b> 無法行走<br><b>意識：</b> 喪失<br><b>傷勢：</b> 四肢軀幹分離<br><b>循環：</b> 無脈搏<br><b>呼吸：</b> <b>無呼吸</b>", ans: "黑", reason: "明顯死亡，判定黑色。" }
+            ],
+            blackSpecial: [
+                { desc: "<b>25歲，男性</b><br><hr><b>行走：</b> 無法行走<br><b>意識：</b> 無意識<br><b>傷勢：</b> 戶外遭雷擊倒地<br><b>循環：</b> 無脈搏<br><b>呼吸：</b> <b>無呼吸</b>", ans: "黑", reason: "【急救例外】雷擊造成呼吸麻痺。<b>實施逆向檢傷，優先給予CPR！</b>存活率極高。" },
+                { desc: "<b>18歲，女性</b><br><hr><b>行走：</b> 無法行走<br><b>意識：</b> 無意識<br><b>傷勢：</b> 落水溺水救起，極度低體溫<br><b>循環：</b> 摸不到脈搏<br><b>呼吸：</b> <b>無呼吸</b>", ans: "黑", reason: "【急救例外】極度低體溫會產生假死。<b>不可放棄，應持續CPR並送醫復溫</b>。" },
+                { desc: "<b>30歲，男性</b><br><hr><b>行走：</b> 無法行走<br><b>意識：</b> 無意識<br><b>傷勢：</b> 遭高壓電擊倒地<br><b>循環：</b> 無脈搏<br><b>呼吸：</b> <b>無呼吸</b>", ans: "黑", reason: "【急救例外】強電流電擊類似雷擊。屬黑色但<b>需立刻給予 CPR</b>搶救。" }
+            ]
+        };
+
+        const allQuestions = [...pools.green, ...pools.yellow, ...pools.redNormal, ...pools.redSpecial, ...pools.blackNormal, ...pools.blackSpecial];
+
+        let currentMode = 'teaching';
+        let currentQueue = [];
+        let currentIndex = 0;
+        let score = 0;
+        let isWaiting = false;
+
+        const viewTeaching = document.getElementById('view-teaching');
+        const viewGame = document.getElementById('view-game');
+        const cardContent = document.getElementById('card-content');
+        const feedbackArea = document.getElementById('feedback-area');
+        const progressDisplay = document.getElementById('progress');
+        const patientIdDisplay = document.getElementById('patient-id');
+        const answerButtons = document.getElementById('answer-buttons');
+        const restartBtn = document.getElementById('action-btn-restart');
+        const modeText = document.getElementById('mode-text');
+
+        function getRandom(arr, count) {
+            let shuffled = [...arr].sort(() => 0.5 - Math.random());
+            return shuffled.slice(0, count);
+        }
+
+        window.switchTab = function(mode, element) {
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('nav-active'));
+            element.classList.add('nav-active');
+            viewTeaching.classList.remove('view-active');
+            viewGame.classList.remove('view-active');
+            currentMode = mode;
+
+            if (mode === 'teaching') {
+                viewTeaching.classList.add('view-active');
+                document.getElementById('main-header').innerText = "🚑 START 檢傷系統";
+            } else if (mode === 'practice') {
+                viewGame.classList.add('view-active');
+                document.getElementById('main-header').innerText = "🏋️ 練習模式";
+                startCurrentMode();
+            } else if (mode === 'test') {
+                viewGame.classList.add('view-active');
+                document.getElementById('main-header').innerText = "🚨 嚴格測驗";
+                startCurrentMode();
+            }
+        };
+
+        window.startCurrentMode = function() {
+            currentIndex = 0; score = 0; isWaiting = false;
+            answerButtons.style.display = 'grid';
+            restartBtn.style.display = 'none';
+            restartBtn.classList.remove('action-btn-red');
+            restartBtn.innerText = "🔄 重新測驗";
+            Array.from(answerButtons.children).forEach(btn => btn.style.opacity = '1');
+
+            if (currentMode === 'practice') {
+                modeText.innerText = "🏋️ 練習模式 (30題)";
+                modeText.style.color = "#3498db";
+                let count = Math.min(30, allQuestions.length);
+                currentQueue = getRandom(allQuestions, count);
+            } else if (currentMode === 'test') {
+                modeText.innerText = "🚨 嚴格淘汰測驗";
+                modeText.style.color = "#e74c3c";
+                
+                let qBlackSpecial = getRandom(pools.blackSpecial, 2);
+                let qBlackNormal = getRandom(pools.blackNormal, 1);
+                let qRedSpecial = getRandom(pools.redSpecial, 3);
+                let qRedNormal = getRandom(pools.redNormal, 7);
+                let qYellow = getRandom(pools.yellow, 5);
+                let qGreen = getRandom(pools.green, 2);
+
+                currentQueue = [...qBlackSpecial, ...qBlackNormal, ...qRedSpecial, ...qRedNormal, ...qYellow, ...qGreen];
+                currentQueue = currentQueue.sort(() => 0.5 - Math.random());
+            }
+            loadQuestion();
+        };
+
+        function loadQuestion() {
+            if (currentIndex >= currentQueue.length) {
+                cardContent.innerHTML = `<div style="text-align:center; padding: 20px 0;"><h2 style="color:#27ae60; font-size:2rem; margin:0;">🎉 演練完成！</h2><h1 style="color:#34495e; font-size:3rem; margin:10px 0;">${score} / ${currentQueue.length}</h1><p style="font-weight:bold; color:#7f8c8d;">太神啦教官！傷患精準分類完畢！</p></div>`;
+                patientIdDisplay.innerText = "Mission Complete";
+                answerButtons.style.display = 'none';
+                restartBtn.style.display = 'block';
+                feedbackArea.innerHTML = "測驗結束，點擊下方按鈕重新進行。";
+                feedbackArea.className = "feedback-neutral";
+                return;
+            }
+
+            const q = currentQueue[currentIndex];
+            cardContent.innerHTML = q.desc;
+            patientIdDisplay.innerText = `Case #${(currentIndex + 1).toString().padStart(2, '0')}`;
+            feedbackArea.innerHTML = "請點擊下方按鈕判斷。";
+            feedbackArea.className = "feedback-neutral";
+            updateProgress();
+            isWaiting = false;
+            Array.from(answerButtons.children).forEach(btn => btn.style.opacity = '1');
+        }
+
+        window.checkAnswer = function(userChoice) {
+            if (isWaiting) return;
+            isWaiting = true;
+            Array.from(answerButtons.children).forEach(btn => btn.style.opacity = '0.6');
+
+            const q = currentQueue[currentIndex];
+            const isCorrect = (userChoice === q.ans);
+
+            if (isCorrect) {
+                score++;
+                feedbackArea.innerHTML = `✅ 正確！答案是「${q.ans}標」`;
+                feedbackArea.className = "feedback-correct";
+                updateProgress();
+                // 答對停留 1.5 秒
+                setTimeout(() => { currentIndex++; loadQuestion(); }, 1500);
+            } else {
+                if (currentMode === 'test') {
+                    feedbackArea.innerHTML = `☠️ <b>測驗淘汰！這是一條人命啊教官！</b><br>正確應為「${q.ans}標」。<span class="analysis-text"><b>失誤解析：</b>${q.reason}</span>`;
+                    feedbackArea.className = "feedback-fatal";
+                    updateProgress();
+                    answerButtons.style.display = 'none';
+                    restartBtn.style.display = 'block';
+                    restartBtn.classList.add('action-btn-red');
+                    restartBtn.innerText = "🚨 淘汰！點此重新測驗";
+                    return; 
+                } else {
+                    feedbackArea.innerHTML = `❌ 錯誤！正確應為「${q.ans}標」<span class="analysis-text"><b>教官解析：</b>${q.reason}</span>`;
+                    feedbackArea.className = "feedback-incorrect";
+                    updateProgress();
+                    // 答錯停留 3 秒，讓學員看解析
+                    setTimeout(() => { currentIndex++; loadQuestion(); }, 3000);
+                }
+            }
+        };
+
+        function updateProgress() {
+            let current = Math.min(currentIndex + 1, currentQueue.length);
+            if (currentMode === 'test' && answerButtons.style.display === 'none' && currentIndex < currentQueue.length) {
+                current = currentIndex + 1;
+            }
+            progressDisplay.innerText = `進度: ${current} / ${currentQueue.length} | 答對: ${score}`;
+        }
+    </script>
+</body>
+</html>
