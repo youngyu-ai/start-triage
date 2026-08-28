@@ -381,159 +381,6 @@
             return audioContext;
         }
 
-        // 1. 車輛長鳴喇叭聲 (支援真實 MP3 + 震盪器備援)
-        function playHornNoise() {
-            if (!ambientNoiseEnabled) return;
-            const hornAudio = new Audio('car_horn.mp3');
-            hornAudio.volume = 0.8;
-            let playPromise = hornAudio.play();
-            if (playPromise !== undefined) {
-                playPromise.then(() => {
-                    updateAudioStatus("📢 [現場干擾] 遠處車輛持續鳴按喇叭！(播放真實音檔)");
-                }).catch(() => {
-                    playHornSynthFallback();
-                });
-            } else {
-                playHornSynthFallback();
-            }
-        }
-
-        function playHornSynthFallback() {
-            try {
-                const ctx = getAudioContext();
-                const now = ctx.currentTime;
-                const osc1 = ctx.createOscillator();
-                const osc2 = ctx.createOscillator();
-                const gain = ctx.createGain();
-
-                osc1.type = 'sawtooth';
-                osc2.type = 'sawtooth';
-                osc1.frequency.setValueAtTime(370, now);
-                osc2.frequency.setValueAtTime(440, now);
-
-                gain.gain.setValueAtTime(0.06, now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
-
-                osc1.connect(gain);
-                osc2.connect(gain);
-                gain.connect(ctx.destination);
-
-                osc1.start(now);
-                osc2.start(now);
-                osc1.stop(now + 1.2);
-                updateAudioStatus("📢 [現場干擾] 遠處車輛持續鳴按喇叭！");
-            } catch(e){}
-        }
-
-        // 2. 警笛救護車警鳴 (支援真實 MP3 + 掃頻備援)
-        function playSirenNoise() {
-            if (!ambientNoiseEnabled) return;
-            const ambAudio = new Audio('ambulance_siren.mp3');
-            ambAudio.volume = 0.85;
-            let playPromise = ambAudio.play();
-            if (playPromise !== undefined) {
-                playPromise.then(() => {
-                    updateAudioStatus("🚨 [現場干擾] 救護車警鳴呼嘯而過！(播放真實音檔)");
-                }).catch(() => {
-                    playAmbulanceSynthFallback();
-                });
-            } else {
-                playAmbulanceSynthFallback();
-            }
-        }
-
-        function playAmbulanceSynthFallback() {
-            try {
-                const ctx = getAudioContext();
-                const now = ctx.currentTime;
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
-
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(650, now);
-                osc.frequency.linearRampToValueAtTime(950, now + 0.6);
-                osc.frequency.linearRampToValueAtTime(650, now + 1.2);
-                osc.frequency.linearRampToValueAtTime(950, now + 1.8);
-
-                gain.gain.setValueAtTime(0.08, now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 2.2);
-
-                osc.connect(gain);
-                gain.connect(ctx.destination);
-
-                osc.start(now);
-                osc.stop(now + 2.2);
-                updateAudioStatus("🚨 [現場干擾] 後方救護警鳴聲呼嘯而過！");
-            } catch(e){}
-        }
-
-        // 3. 消防車專屬警鳴與重低音氣笛 (支援真實 MP3 + 合成備援)
-        function playFireTruckSiren() {
-            if (!ambientNoiseEnabled) return;
-            const fireAudio = new Audio('firetruck_siren.mp3');
-            fireAudio.volume = 0.9;
-            let playPromise = fireAudio.play();
-            if (playPromise !== undefined) {
-                playPromise.then(() => {
-                    updateAudioStatus("🚒 [現場干擾] 消防車警笛與氣笛馳援！(播放真實音檔)");
-                }).catch(() => {
-                    playFireTruckSynthFallback();
-                });
-            } else {
-                playFireTruckSynthFallback();
-            }
-        }
-
-        function playFireTruckSynthFallback() {
-            try {
-                const ctx = getAudioContext();
-                const now = ctx.currentTime;
-
-                // 消防重型氣笛
-                const hornOsc1 = ctx.createOscillator();
-                const hornOsc2 = ctx.createOscillator();
-                const hornGain = ctx.createGain();
-
-                hornOsc1.type = 'sawtooth';
-                hornOsc2.type = 'square';
-                hornOsc1.frequency.setValueAtTime(220, now);
-                hornOsc2.frequency.setValueAtTime(330, now);
-
-                hornGain.gain.setValueAtTime(0.09, now);
-                hornGain.gain.setValueAtTime(0.09, now + 0.6);
-                hornGain.gain.exponentialRampToValueAtTime(0.001, now + 1.4);
-
-                hornOsc1.connect(hornGain);
-                hornOsc2.connect(hornGain);
-                hornGain.connect(ctx.destination);
-
-                hornOsc1.start(now);
-                hornOsc2.start(now);
-                hornOsc1.stop(now + 1.4);
-                hornOsc2.stop(now + 1.4);
-
-                // 消防車長鳴 Wail Siren
-                const wailOsc = ctx.createOscillator();
-                const wailGain = ctx.createGain();
-                wailOsc.type = 'sawtooth';
-                wailOsc.frequency.setValueAtTime(400, now + 0.3);
-                wailOsc.frequency.linearRampToValueAtTime(850, now + 1.5);
-                wailOsc.frequency.linearRampToValueAtTime(450, now + 2.6);
-
-                wailGain.gain.setValueAtTime(0.001, now);
-                wailGain.gain.linearRampToValueAtTime(0.07, now + 0.4);
-                wailGain.gain.exponentialRampToValueAtTime(0.001, now + 2.8);
-
-                wailOsc.connect(wailGain);
-                wailGain.connect(ctx.destination);
-
-                wailOsc.start(now + 0.3);
-                wailOsc.stop(now + 2.8);
-
-                updateAudioStatus("🚒 [現場干擾] 消防車重型氣笛與警鳴馳援抵達！");
-            } catch(e){}
-        }
-
         // 取得系統中最佳的溫柔女性/中文女聲
         function getSweetFemaleVoice() {
             if (!('speechSynthesis' in window)) return null;
@@ -554,7 +401,7 @@
             return voices.find(v => v.lang.startsWith('zh')) || null;
         }
 
-        // 4. 溫柔甜美女性喊救命聲 (支援自訂真人 MP3 音檔 + 語音合成備援)
+        // 1. 溫柔甜美女性喊救命聲 (支援自訂真人 MP3 音檔 + 語音合成備援)
         const realFemaleAudioFiles = [
             'female_help1.mp3',
             'female_help2.mp3',
@@ -564,7 +411,6 @@
         function playFemaleHelpNoise() {
             if (!ambientNoiseEnabled) return;
             
-            // 優先嘗試播放您上傳至 GitHub 的真人 MP3 音檔
             const randFile = realFemaleAudioFiles[Math.floor(Math.random() * realFemaleAudioFiles.length)];
             const audioObj = new Audio(randFile);
             audioObj.volume = 0.9;
@@ -574,7 +420,6 @@
                 playPromise.then(() => {
                     updateAudioStatus("🌸 [傷患干擾] 甜美女聲真人呼救中（播放自訂音檔）");
                 }).catch(() => {
-                    // 若尚未上傳真人音檔或載入失敗，自動啟動甜美女聲語音合成作為備援
                     playFemaleVoiceSynthesisFallback();
                 });
             } else {
@@ -611,13 +456,11 @@
             } catch(e){}
         }
 
-        // 5. 無線電呼叫檢傷官 (Radio Dispatcher Chatter)
-        function playRadioChatterNoise() {
-            if (!ambientNoiseEnabled) return;
+        // 2. 實戰無線電通聯音效產生器 (含白噪音 Squelch 與專屬音調)
+        function playRadioSquelch(callback) {
             try {
                 const ctx = getAudioContext();
-                // 無線電白噪音開頭 (Squelch)
-                const bufferSize = ctx.sampleRate * 0.15;
+                const bufferSize = ctx.sampleRate * 0.12;
                 const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
                 const data = buffer.getChannelData(0);
                 for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
@@ -625,47 +468,90 @@
                 const noise = ctx.createBufferSource();
                 noise.buffer = buffer;
                 const gain = ctx.createGain();
-                gain.gain.setValueAtTime(0.08, ctx.currentTime);
+                gain.gain.setValueAtTime(0.07, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
                 noise.connect(gain);
                 gain.connect(ctx.destination);
                 noise.start();
 
-                setTimeout(() => {
-                    if ('speechSynthesis' in window && ambientNoiseEnabled) {
-                        const radioPhrases = [
-                            "指揮站呼叫檢傷官，請回報目前傷情！",
-                            "檢傷官請注意，後送通道已建立完畢！",
-                            "指揮站呼叫，請迅速確認第一批紅標人數！"
-                        ];
-                        const text = radioPhrases[Math.floor(Math.random() * radioPhrases.length)];
-                        const utter = new SpeechSynthesisUtterance(text);
-                        utter.lang = 'zh-TW';
-                        utter.pitch = 0.85;
-                        utter.rate = 1.1;
-                        utter.volume = 0.85;
-                        window.speechSynthesis.speak(utter);
-                        updateAudioStatus("📻 [無線電呼叫] 指揮站：「" + text + "」");
-                    }
-                }, 150);
-            } catch(e){}
+                setTimeout(callback, 130);
+            } catch(e) {
+                callback();
+            }
         }
 
-        // 隨機背景干擾調度器 (納入消防車警笛與真人音檔)
+        // 3. 後送官無線電呼叫 A：1紅1綠準備後送
+        function playRadioEvac1Red1Green() {
+            if (!ambientNoiseEnabled) return;
+            playRadioSquelch(() => {
+                if ('speechSynthesis' in window && ambientNoiseEnabled) {
+                    const text = "後送官呼叫檢傷官，請選擇傷患1紅1綠準備後送。";
+                    const utter = new SpeechSynthesisUtterance(text);
+                    utter.lang = 'zh-TW';
+                    utter.pitch = 0.9;
+                    utter.rate = 1.05;
+                    utter.volume = 0.95;
+                    window.speechSynthesis.speak(utter);
+                    updateAudioStatus("📻 [無線電呼叫] 後送官呼叫檢傷官，請選擇傷患1紅1綠準備後送");
+                }
+            });
+        }
+
+        // 4. 後送官無線電呼叫 B：詢問紅區人數
+        function playRadioEvacQueryRed() {
+            if (!ambientNoiseEnabled) return;
+            playRadioSquelch(() => {
+                if ('speechSynthesis' in window && ambientNoiseEnabled) {
+                    const text = "後送官呼叫檢傷官，目前還有幾名紅區傷患？";
+                    const utter = new SpeechSynthesisUtterance(text);
+                    utter.lang = 'zh-TW';
+                    utter.pitch = 0.92;
+                    utter.rate = 1.05;
+                    utter.volume = 0.95;
+                    window.speechSynthesis.speak(utter);
+                    updateAudioStatus("📻 [無線電呼叫] 後送官呼叫檢傷官，目前還有幾名紅區傷患?");
+                }
+            });
+        }
+
+        // 5. 副檢傷官無線電呼叫：需要擔架與救護員
+        function playRadioDeputyNeedResources() {
+            if (!ambientNoiseEnabled) return;
+            playRadioSquelch(() => {
+                if ('speechSynthesis' in window && ambientNoiseEnabled) {
+                    const text = "副檢傷官呼叫檢傷官，檢傷區還需要擔架跟救護員！";
+                    const utter = new SpeechSynthesisUtterance(text);
+                    utter.lang = 'zh-TW';
+                    utter.pitch = 1.02;
+                    utter.rate = 1.1;
+                    utter.volume = 0.95;
+                    window.speechSynthesis.speak(utter);
+                    updateAudioStatus("📻 [無線電呼叫] 副檢傷官呼叫檢傷官，檢傷區還需要擔架跟救護員");
+                }
+            });
+        }
+
+        // 隨機背景干擾調度器 (輪流觸發女聲呼救與三大實戰無線電通聯)
         function triggerRandomNoise() {
             if (!ambientNoiseEnabled) return;
-            const effects = [playHornNoise, playSirenNoise, playFireTruckSiren, playFemaleHelpNoise, playRadioChatterNoise];
+            const effects = [
+                playFemaleHelpNoise,
+                playRadioEvac1Red1Green,
+                playRadioEvacQueryRed,
+                playRadioDeputyNeedResources
+            ];
             const randEffect = effects[Math.floor(Math.random() * effects.length)];
             randEffect();
         }
 
         function startAmbientNoiseLoop() {
             stopAmbientNoiseLoop();
-            // 每 5 ~ 8 秒隨機觸發一次逼真現場干擾
+            // 每 5 ~ 7 秒隨機觸發一次實戰無線電或呼救干擾
             noiseInterval = setInterval(() => {
                 triggerRandomNoise();
-            }, 6000);
-            // 立即觸發一次無線電建立臨場感
-            setTimeout(playRadioChatterNoise, 1200);
+            }, 5500);
+            // 立即觸發一次無線電通聯
+            setTimeout(playRadioEvac1Red1Green, 1200);
         }
 
         function stopAmbientNoiseLoop() {
