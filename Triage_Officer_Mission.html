@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>檢傷官任務：30人遊覽車翻覆事故特訓系統</title>
+    <style>
+        :root {
+            --red: #e74c3c;
+            --yellow: #f1c40f;
+            --green: #2ecc71;
+            --black: #34495e;
+            --bg-color: #f5f6fa;
+            --text-color: #2c3e50;
+            --primary: #3498db;
+            --nav-bg: #ffffff;
+            --purple: #8e44ad;
+        }
+
+        body {
+            margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif, 'Microsoft JhengHei';
+            background-color: var(--bg-color); color: var(--text-color); display: flex; flex-direction: column;
+            height: 100vh; overflow: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* 頂部導覽列 */
+        header {
+            background-color: #2c3e50; color: white; padding: 15px; text-align: center;
+            font-size: 1.2rem; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.1); flex-shrink: 0; z-index: 10;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+
+        .header-title { flex: 1; text-align: center; margin-left: 28px; }
+        .header-stat { font-size: 0.85rem; background: rgba(255,255,255,0.15); padding: 4px 10px; border-radius: 12px; font-family: monospace; }
+
+        #main-content { flex: 1; overflow-y: auto; position: relative; background-color: var(--bg-color); scroll-behavior: smooth; }
+        .view-section { display: none; padding: 15px; max-width: 800px; margin: 0 auto; box-sizing: border-box; min-height: 100%; }
+        .view-active { display: block; animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* ================= 教學區塊樣式 ================= */
+        .teaching-content { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); line-height: 1.6; margin-bottom: 20px; }
+        .teaching-content h2 { color: var(--primary); border-bottom: 2px solid #ecf0f1; padding-bottom: 5px; margin-top: 0; font-size: 1.25rem; }
+        .teaching-content h3 { color: #e67e22; margin-top: 15px; font-size: 1.1rem; }
+        .teaching-content ul { padding-left: 20px; font-size: 1.05rem; }
+        .teaching-content li { margin-bottom: 10px; }
+
+        .highlight-box { background: #fff3cd; padding: 15px; border-left: 4px solid #f1c40f; border-radius: 4px; margin: 12px 0; display: flex; align-items: flex-start; gap: 12px; }
+        .blue-box { background: #eaf2f8; padding: 15px; border-left: 4px solid var(--primary); border-radius: 4px; margin: 12px 0; display: flex; align-items: flex-start; gap: 12px; }
+        .red-box { background: #fdedec; padding: 15px; border-left: 4px solid var(--red); border-radius: 4px; margin: 12px 0; display: flex; align-items: flex-start; gap: 12px; }
+        .black-box { background: #ebedef; padding: 15px; border-left: 4px solid var(--black); border-radius: 4px; margin: 12px 0; display: flex; align-items: flex-start; gap: 12px; }
+        .box-text-content { flex: 1; }
+
+        /* ================= 遊戲區塊樣式 ================= */
+        .mode-title { text-align: center; font-weight: bold; font-size: 1.2rem; margin-bottom: 10px; color: var(--primary); display: flex; justify-content: center; align-items: center; gap: 10px; }
+        .test-mode-title { color: var(--red); }
+
+        .patient-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 15px; border-left: 6px solid var(--primary); }
+        .patient-card h3 { margin-top: 0; color: #34495e; border-bottom: 2px solid #ecf0f1; padding-bottom: 8px; font-size: 1.2rem; display: flex; justify-content: space-between; align-items: center; }
+        .patient-tag { font-size: 0.9rem; background: #ecf0f1; padding: 3px 8px; border-radius: 12px; color: #7f8c8d; }
+        .patient-details { font-size: 1.1rem; line-height: 1.7; color: #2c3e50; }
+
+        /* 四選一按鈕列表 */
+        .option-group { display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; }
+        .opt-btn {
+            padding: 14px 16px; font-size: 1.05rem; font-weight: 600; color: #2c3e50; background: #ffffff;
+            border: 2px solid #dcdde1; border-radius: 10px; cursor: pointer; text-align: left;
+            transition: all 0.15s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.04); display: flex; align-items: center; gap: 12px;
+        }
+        .opt-btn:hover { border-color: var(--primary); background: #f8fbfd; }
+        .opt-btn:active { transform: scale(0.98); }
+        .opt-letter {
+            width: 32px; height: 32px; border-radius: 8px; background: #f1f2f6; color: #2f3542;
+            display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0; border: 1px solid #ced6e0;
+        }
+
+        .opt-correct { background-color: #eafaf1 !important; border-color: var(--green) !important; color: #27ae60 !important; }
+        .opt-correct .opt-letter { background-color: var(--green) !important; color: white !important; }
+        .opt-incorrect { background-color: #fdedec !important; border-color: var(--red) !important; color: #c0392b !important; }
+        .opt-incorrect .opt-letter { background-color: var(--red) !important; color: white !important; }
+
+        #feedback-area {
+            text-align: left; font-size: 1.05rem; font-weight: bold; min-height: 70px; margin-bottom: 12px;
+            padding: 14px; border-radius: 8px; background-color: #fff; box-shadow: inset 0 0 5px rgba(0,0,0,0.05); transition: all 0.3s;
+        }
+        .feedback-correct { border-left: 6px solid var(--green); color: #27ae60; background-color: #eafaf1 !important; }
+        .feedback-incorrect { border-left: 6px solid var(--red); color: #c0392b; background-color: #fdedec !important; }
+        .feedback-neutral { border-left: 6px solid #bdc3c7; color: #7f8c8d; }
+        .feedback-fatal { border-left: 6px solid #8e44ad; color: #8e44ad; background-color: #f4ecf7 !important; }
+
+        #progress { text-align: center; color: #7f8c8d; font-size: 0.95rem; font-weight: bold; padding-bottom: 10px; }
+        .analysis-text { display: block; font-size: 0.95rem; color: #34495e; font-weight: normal; margin-top: 6px; line-height: 1.5; }
+
+        .action-btn {
+            display: none; width: 100%; padding: 16px; font-size: 1.15rem; font-weight: bold;
+            color: white; background-color: var(--primary); border: none; border-radius: 10px; margin-top: 10px; cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .action-btn-red { background-color: var(--red); }
+        .action-btn-green { background-color: var(--green); }
+
+        /* ================= 底部導覽列 ================= */
+        nav {
+            display: flex; background-color: var(--nav-bg); box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+            flex-shrink: 0; padding-bottom: env(safe-area-inset-bottom);
+        }
+        .nav-item {
+            flex: 1; text-align: center; padding: 12px 0; color: #7f8c8d; font-size: 0.85rem;
+            cursor: pointer; transition: color 0.2s; border-top: 3px solid transparent; -webkit-tap-highlight-color: transparent;
+        }
+        .nav-item i { display: block; font-size: 1.4rem; margin-bottom: 3px; font-style: normal; }
+        .nav-active { color: var(--primary); border-top: 3px solid var(--primary); font-weight: bold; background: #f0f8ff; }
+    </style>
+</head>
+<body>
+
+    <header id="main-header">
+        <span class="header-title">🚑 檢傷官任務：30人遊覽車翻覆特訓</span>
+        <span id="streak-badge" class="header-stat" style="display:none;">連對: 0/20</span>
+    </header>
+
+    <div id="main-content">
+        
+        <!-- ================= 視圖 1：教學指南 ================= -->
+        <div id="view-teaching" class="view-section view-active">
+            
+            <!-- 情境總覽 -->
+            <div class="teaching-content">
+                <h2>🚌 演練背景：30人遊覽車翻覆事故 (檢傷官視角)</h2>
+                <div class="blue-box">
+                    <svg viewBox="0 0 100 100" width="60" height="60" style="flex-shrink:0;">
+                        <circle cx="50" cy="35" r="15" fill="#f1c27d"/>
+                        <path d="M 30 35 Q 50 10 70 35 L 75 35 Q 50 5 25 35 Z" fill="#f39c12"/>
+                        <rect x="35" y="50" width="30" height="35" rx="5" fill="#f1c40f"/>
+                        <path d="M 35 55 L 50 65 L 65 55" stroke="#2c3e50" stroke-width="2" fill="none"/>
+                        <text x="50" y="80" font-size="10" text-anchor="middle" fill="#2c3e50" font-weight="bold">檢傷官</text>
+                    </svg>
+                    <div class="box-text-content">
+                        <b style="color:var(--primary); font-size:1.1rem;">角色任務指引：</b><br>
+                        你被指派為現場第一位「檢傷官」。車尾起火中、30名傷患受困散落，考驗你對<b>「身分識別、安全回報、副檢傷官配置與後勤物資調度」</b>的全流程指揮掌控！
+                    </div>
+                </div>
+            </div>
+
+            <!-- 時間序流程導讀 -->
+            <div class="teaching-content">
+                <h2>📋 檢傷官四大階段任務時間序</h2>
+
+                <!-- 階段 1 -->
+                <div class="highlight-box">
+                    <div class="box-text-content">
+                        <b style="color:#d35400; font-size:1.05rem;">階段一：抵達安全評估與初期建立 (序 1~4)</b>
+                        <ul style="margin-top:8px; padding-left:18px;">
+                            <li><b>序 1-2：</b> 穿上<b>黃色檢傷官背心</b>建立身分識別，迅速劃定<b>檢傷區、急救區</b>位置與路線指引。</li>
+                            <li><b>序 3：</b> 車尾起火！通報指揮官派<b>消防滅火</b>，持大聲公呼喊：<i>「能走的人請往我移動並攙扶清醒者！」</i></li>
+                            <li><b>序 4：</b> 滅火確認安全後接近車體，向<b>救護指揮官</b>回報<b>「傷患概略人數及創傷嚴重度」</b>。</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- 階段 2 -->
+                <div class="blue-box">
+                    <div class="box-text-content">
+                        <b style="color:var(--primary); font-size:1.05rem;">階段二：一次檢傷與 START 分類 (序 5~6)</b>
+                        <ul style="margin-top:8px; padding-left:18px;">
+                            <li><b>序 5：</b> 依 RPM 檢傷（不能走且無法配合者最先評估）。僅執行<b>「打開呼吸道」</b>與<b>「控制大出血」</b>。</li>
+                            <li><b>特殊身分：</b> 孕婦、受傷救災同仁不論傷勢一律判定為 🔴 <b>紅色</b>；雷擊/低溫執行<b>逆向檢傷</b>先救黑色。</li>
+                            <li><b>序 6：</b> 向指揮官回報<b>「1黑、5紅、9黃 (共15名重中傷，多名燒灼傷) 與總人數」</b>；申請<b>「1屍袋、5組以上長背板/擔架、燒燙傷包」</b>並集中於器材區。</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- 階段 3 -->
+                <div class="black-box">
+                    <div class="box-text-content">
+                        <b style="color:#2c3e50; font-size:1.05rem;">階段三：支援到達、副檢傷官配置與搬運調度 (序 7~11)</b>
+                        <ul style="margin-top:8px; padding-left:18px;">
+                            <li><b>序 7 (副檢傷官配置)：</b>
+                                <br>▪ <b>一次檢傷已完畢：</b> 指示其<b>反穿黃背心</b>引導可行走者至綠區掛傷卡；檢傷官抽身監督急救/器材/檢傷區。
+                                <br>▪ <b>一次檢傷未完畢：</b> 指示其反穿黃背心<b>接續檢傷</b>；檢傷官自己去引導綠區與全場調度。
+                            </li>
+                            <li><b>序 8-9：</b> 搬運人手/器材不足時，檢傷官調配急救區閒置人員或向指揮官要人，確認大隊幕僚管理器材區。</li>
+                            <li><b>序 10：</b> 確認黑色（死亡）患者，向指揮站申請<b>屍袋、設臨時停屍所</b>並通知警方封鎖。</li>
+                            <li><b>序 11：</b> 傷患全數至急救區後，回報指揮官並派副檢傷官前往急救區帶領展開<b>「二次檢傷」</b>。</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- 階段 4 -->
+                <div class="red-box">
+                    <div class="box-text-content">
+                        <b style="color:var(--red); font-size:1.05rem;">階段四：二次檢傷、傷情惡化與後送收尾 (序 12~16)</b>
+                        <ul style="margin-top:8px; padding-left:18px;">
+                            <li><b>序 12：</b> 綠區傷患惡化轉紅，<b>不須搬動病人換區</b>！直接在綠區就地積極處置並通報後送人員提高優先度。</li>
+                            <li><b>序 13：</b> 後送啟動回報紅黃綠人數。若 4 名紅標中包含<b>消防同仁</b>，果斷下達其為<b>「第 1 位後送」</b>。</li>
+                            <li><b>序 14：</b> 急救區剩 2 傷患但有 6 名 EMT 時，回報指揮官確認休息區運作並安排人員休息。</li>
+                            <li><b>序 15-16：</b> 剩 2 名黃區時通報後送官；全數交付後送區並確認死者包裹後，向<b>救護指揮官回報演練完成</b>。</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 快速切換至練習 -->
+            <div style="text-align: center; margin-top: 15px;">
+                <button onclick="switchTab('practice', document.querySelectorAll('.nav-item')[1])" class="action-btn action-btn-green" style="display:block;">
+                    🏋️ 進入 20 題決策練習模式
+                </button>
+            </div>
+        </div>
+
+        <!-- ================= 視圖 2 & 3：測驗/練習遊戲區 ================= -->
+        <div id="view-game" class="view-section">
+            <div id="mode-title-display" class="mode-title">
+                <!-- 檢傷官 Q 版小圖 -->
+                <svg viewBox="0 0 100 100" width="40" height="40" style="vertical-align: middle;">
+                    <circle cx="50" cy="35" r="15" fill="#f1c27d"/>
+                    <path d="M 30 35 Q 50 10 70 35 L 75 35 Q 50 5 25 35 Z" fill="#2c3e50"/> 
+                    <rect x="35" y="50" width="30" height="35" rx="5" fill="#f1c40f"/> 
+                    <path d="M 35 55 L 50 65 L 65 55" stroke="#ffffff" stroke-width="2" fill="none"/>
+                    <text x="50" y="80" font-size="10" text-anchor="middle" fill="#2c3e50" font-weight="bold">檢傷</text>
+                </svg>
+                <span id="mode-text">🏋️ 決策練習模式 (20題)</span>
+            </div>
+            
+            <div class="patient-card">
+                <h3>📝 演練情境決策 <span class="patient-tag" id="patient-id">Case #01</span></h3>
+                <div class="patient-details" id="card-content">載入中...</div>
+            </div>
+
+            <div id="feedback-area" class="feedback-neutral">請點擊下方選項進行指揮決策。</div>
+
+            <!-- 四選一按鈕群 -->
+            <div class="option-group" id="answer-buttons">
+                <!-- Dynamic options loaded via JS -->
+            </div>
+            
+            <button id="action-btn-restart" class="action-btn" onclick="startCurrentMode()">🔄 重新開始挑戰</button>
+
+            <div id="progress">進度: 0 / 20 | 答對: 0</div>
+        </div>
+
+    </div>
+
+    <!-- 底部導覽列 -->
+    <nav>
+        <div class="nav-item nav-active" onclick="switchTab('teaching', this)">
+            <i>📖</i>教學指南
+        </div>
+        <div class="nav-item" onclick="switchTab('practice', this)">
+            <i>🏋️</i>練習模式
+        </div>
+        <div class="nav-item" onclick="switchTab('test', this)">
+            <i>🚨</i>嚴格測驗
+        </div>
+        <div class="nav-item" onclick="window.location.href='Evacuation_Officer_Pro.html'">
+            <i>🚑</i>後送官沙盤
+        </div>
+        <!-- 返回大廳首頁 (可在此修改跳轉網址) -->
+        <div class="nav-item" onclick="window.location.href='index.html'">
+            <i>🏠</i>回首頁
+        </div>
+    </nav>
+
+    <script>
+        // ================= 20題決策型題庫 =================
+        const questionBank = [
+            {
+                id: 1,
+                category: "身分識別",
+                text: "救護指揮官指派第一輛到達現場救護車之資深同仁擔任檢傷官時，該員應立即執行何項人力與物資配置？",
+                options: [
+                    { key: "A", text: "立即奔向車體開始檢傷" },
+                    { key: "B", text: "先去後送區幫忙排車輛" },
+                    { key: "C", text: "穿上黃色背心，並設置檢傷區、急救區位置與傷患集結路線指引" },
+                    { key: "D", text: "留在救護車上等待副檢傷官前來報到" }
+                ],
+                ans: "C",
+                reason: "擔任檢傷官之首要動作為穿上黃色背心確立身分，並立即建立檢傷、急救區及傷患路線指引（時間序 1-2）。"
+            },
+            {
+                id: 2,
+                category: "安全與回報",
+                text: "在遊覽車翻覆現場，車尾仍在起火中，檢傷官評估後應如何進行回報與初期人力引導？",
+                options: [
+                    { key: "A", text: "帶領所有救護同仁衝入火場搶救" },
+                    { key: "B", text: "通報救護指揮官派遣消防滅火，並用大聲公呼喊可以走的人員往安全檢傷位置移動" },
+                    { key: "C", text: "保持靜默，等火熄滅後再開始檢傷" },
+                    { key: "D", text: "直接向後送官報告現場起火，準備撤退" }
+                ],
+                ans: "B",
+                reason: "安全為首要原則。檢傷官應通報指揮官派人滅火，並利用大聲公進行「口令篩選」，引導可行走之輕傷者脫離危險區（時間序 3）。"
+            },
+            {
+                id: 3,
+                category: "初期回報",
+                text: "在確認現場安全可進入後，檢傷官對傷患進行迅速檢視，此時應向「誰」進行「何種內容」的回報？",
+                options: [
+                    { key: "A", text: "向後送官回報確切的死傷名單" },
+                    { key: "B", text: "向消防局長回報車輛車牌與保險資訊" },
+                    { key: "C", text: "向救護指揮官回報傷患概略人數及創傷嚴重度" },
+                    { key: "D", text: "向副檢傷官指派詳細的急救分工" }
+                ],
+                ans: "C",
+                reason: "檢傷官必須先向「救護指揮官」回報「概略人數及創傷嚴重度」，以便系統評估啟動大量傷病患機制與追加支援（時間序 4）。"
+            },
+            {
+                id: 4,
+                category: "特殊檢傷決策",
+                text: "演練中若設定事故現場為「雷擊、電傷或低溫環境」，檢傷官應採取何種檢傷配置？",
+                options: [
+                    { key: "A", text: "依然按照 START 流程，最後評估黑色患者" },
+                    { key: "B", text: "執行「逆向檢傷」，優先急救無意識、呼吸及脈搏之黑色患者" },
+                    { key: "C", text: "將所有人員一律判定為綠色" },
+                    { key: "D", text: "拒絕進入現場，要求全員撤離" }
+                ],
+                ans: "B",
+                reason: "在雷擊、電傷或低溫特殊災害環境下，必須打破常規執行「逆向檢傷」，優先搶救無呼吸心跳的黑色患者（時間序 5）。"
+            },
+            {
+                id: 5,
+                category: "特殊身分配置",
+                text: "在檢傷過程中，發現受傷人員中有一名「孕婦」與一名「受傷的消防同仁」，檢傷官應如何判定其檢傷等級？",
+                options: [
+                    { key: "A", text: "視其生理表徵（呼吸、脈搏、意識）判定" },
+                    { key: "B", text: "孕婦判定為紅色，消防同仁判定為綠色" },
+                    { key: "C", text: "兩者不論傷勢如何，都應判定為紅色（第一優先）" },
+                    { key: "D", text: "判定為黃色，等待二次檢傷再確認" }
+                ],
+                ans: "C",
+                reason: "特殊身分準則規定：傷病患中如有「孕婦」及「救災救護同仁」，不論其當下傷勢如何，一律判定為「紅色」最優先（時間序 5）。"
+            },
+            {
+                id: 6,
+                category: "一次檢傷完畢回報",
+                text: "檢傷官完成所有傷患的一次檢傷分類後，應如何向指揮官回報與請求資源？",
+                options: [
+                    { key: "A", text: "回報紅黃綠黑人數與總人數，並請求加派人員協助搬運與治療，同時將所需器材放於器材區" },
+                    { key: "B", text: "僅回報總人數，不需要提出器材需求" },
+                    { key: "C", text: "直接指揮後送車輛，不需通報指揮官" },
+                    { key: "D", text: "呼叫副檢傷官自行向指揮官要人" }
+                ],
+                ans: "A",
+                reason: "一次檢傷完畢後，檢傷官需向「救護指揮官」回報紅黃綠黑及總人數，並根據傷情向指揮官請求特定的搬運與救護器材（時間序 6）。"
+            },
+            {
+                id: 7,
+                category: "特殊器材回報",
+                text: "本案遊覽車事故一次檢傷完畢，統計有 1 黑 5 紅 9 黃，且有多名燒灼傷患者。檢傷官應向指揮官具體請求哪些器材？",
+                options: [
+                    { key: "A", text: "請求 5 組長背板、擔架與燒燙傷包，以及 1 個屍袋" },
+                    { key: "B", text: "請求 15 組氧氣面罩與 30 條三角巾" },
+                    { key: "C", text: "請求 1 輛吊車與 2 組破壞剪" },
+                    { key: "D", text: "不需要請求器材，直接使用救護車上的現有物資" }
+                ],
+                ans: "A",
+                reason: "針對 1黑5紅9黃 及燒灼傷情境，檢傷官必須明確呼叫指揮官，要求「1屍袋、5組以上長背板/擔架以及燒燙傷包」（時間序 6）。"
+            },
+            {
+                id: 8,
+                category: "副檢傷官配置時機",
+                text: "一次檢傷「已完畢」時，復興 91 支援同仁抵達現場，指揮官指派一名 EMT 協助檢傷官。此時檢傷官應如何配置該人力？",
+                options: [
+                    { key: "A", text: "指示其反穿黃色背心擔任副檢傷官，接續未完成的一次檢傷" },
+                    { key: "B", text: "指示其反穿黃色背心擔任副檢傷官，引導可行走者至綠區掛傷卡；自己關注各區人手器材是否足夠" },
+                    { key: "C", text: "叫該名同仁在旁邊休息待命" },
+                    { key: "D", text: "指派該同仁直接去擔任後送官" }
+                ],
+                ans: "B",
+                reason: "若一次檢傷「已完畢」，新到場的副檢傷官應被指派去引導綠區傷患掛傷卡；檢傷官自己退至全盤監督角色（時間序 7）。"
+            },
+            {
+                id: 9,
+                category: "副檢傷官配置時機",
+                text: "承上題，若此時一次檢傷「尚未完畢」，檢傷官對該名 EMT 的人力配置決策有何不同？",
+                options: [
+                    { key: "A", text: "依然請他引導綠區掛傷卡，檢傷官自己繼續檢傷" },
+                    { key: "B", text: "指示他反穿黃色背心擔任副檢傷官，並「接續未完成的檢傷」；檢傷官自己則去引導綠區掛傷卡並關注全場" },
+                    { key: "C", text: "兩人分頭各自進行全新的一輪檢傷，不互相干涉" },
+                    { key: "D", text: "請他直接去急救區幫忙插管救治" }
+                ],
+                ans: "B",
+                reason: "若一次檢傷「未完畢」，檢傷官應將「接續檢傷」工作交給副檢傷官，自己抽身去執行綠區引導及全場調度（時間序 7）。"
+            },
+            {
+                id: 10,
+                category: "搬運人力調度",
+                text: "副檢傷官於現場呼叫：「需要人手協助搬運！」檢傷官應如何調度現場人力？",
+                options: [
+                    { key: "A", text: "拒絕其請求，要求副檢傷官自行搬運" },
+                    { key: "B", text: "指派急救區閒置人員或剛報到人員協助，並向指揮官請求支援人力" },
+                    { key: "C", text: "指派正在對紅色傷患進行 CPR 的 EMT 停止救護去搬運" },
+                    { key: "D", text: "親自跑進去搬運，將指揮防線空置" }
+                ],
+                ans: "B",
+                reason: "搬運人力不足時，檢傷官應善用「急救區閒置/剛報到人員」進行動態調度，並向指揮官請求支援人力（時間序 8）。"
+            },
+            {
+                id: 11,
+                category: "搬運器材調度",
+                text: "副檢傷官呼叫：「搬運器材不足！」檢傷官的人力與物資配置程序為何？",
+                options: [
+                    { key: "A", text: "請副檢傷官自己去消防車上找長背板" },
+                    { key: "B", text: "請傷患自己忍耐，用抱的或背的搬運" },
+                    { key: "C", text: "指派人員由器材區拿取，若仍不足則向指揮官申請，並確認大隊幕僚人員擔任器材區後勤管理" },
+                    { key: "D", text: "叫後送區的救護車司機把擔架床卸下送過來" }
+                ],
+                ans: "C",
+                reason: "器材不足時應先由「器材區」調配；不足再向指揮官申請，並確認大隊幕僚人員擔任器材後勤管理（時間序 9）。"
+            },
+            {
+                id: 12,
+                category: "死亡患者處置回報",
+                text: "副檢傷官在現場確認有黑色（死亡）患者。檢傷官應如何下達處置與回報決策？",
+                options: [
+                    { key: "A", text: "叫搬運人員立刻將死者抬到急救區與紅區傷患放在一起" },
+                    { key: "B", text: "請指揮站提供屍袋、規劃設置臨時停屍場所，並通知警察到場協助封鎖與後續處理" },
+                    { key: "C", text: "隱瞞死亡人數，避免引起恐慌" },
+                    { key: "D", text: "直接請後送區將遺體載往醫院" }
+                ],
+                ans: "B",
+                reason: "死者不進入急救區。檢傷官應向指揮站回報「需要屍袋、設臨時停屍所」，並通知警方介入處置封鎖（時間序 10）。"
+            },
+            {
+                id: 13,
+                category: "搬運完畢回報",
+                text: "副檢傷官呼叫：「傷患已全部搬運至急救區！」檢傷官此時的下一個動作為何？",
+                options: [
+                    { key: "A", text: "開始自行收拾裝備準備返隊" },
+                    { key: "B", text: "回報給指揮官，並指派副檢傷官到急救區帶領 EMT 進行二次檢傷與救護處置" },
+                    { key: "C", text: "叫所有 EMT 原地解散，交給後送官處理" },
+                    { key: "D", text: "回報給後送官，要求救護車立刻全數強行出發" }
+                ],
+                ans: "B",
+                reason: "傷患全數集結到急救區後，檢傷官必須「回報指揮官」，並指派副檢傷官至急救區帶領展開「二次檢傷」（時間序 11）。"
+            },
+            {
+                id: 14,
+                category: "傷情惡化決策",
+                text: "在急救區進行二次檢傷時，副檢傷官呼叫：「綠區發現一名傷患惡化轉為紅色！」檢傷官應下達何種決策？",
+                options: [
+                    { key: "A", text: "立刻派人將該傷患搬運到紅區" },
+                    { key: "B", text: "暫時不予理會，因為綠區原本就是輕傷" },
+                    { key: "C", text: "指示 EMT 直接在綠區就地進行積極救護處置，不須搬動病人，並通知後送人員提高其後送優先順序" },
+                    { key: "D", text: "訓斥副檢傷官一次檢傷不準確" }
+                ],
+                ans: "C",
+                reason: "急救區傷患惡化應採取「就地救護、不搬動病人換區」原則，並通知後送人員提高其後送優先順序（時間序 12）。"
+            },
+            {
+                id: 15,
+                category: "後送啟動回報",
+                text: "當後送官通知「可以開始後送」時，檢傷官的回報與決策內容為何？",
+                options: [
+                    { key: "A", text: "回報紅黃綠人數，並依照後送官指定的紅黃綠人數，選擇優先後送的傷情" },
+                    { key: "B", text: "直接指派救護車載走自己覺得最順眼的傷患" },
+                    { key: "C", text: "請後送官自己進來急救區挑選病人" },
+                    { key: "D", text: "回報總人數，要求後送官自行決定順序" }
+                ],
+                ans: "A",
+                reason: "後送啟動時，檢傷官向後送官回報精確的「紅黃綠人數」，並依後送官指定的配額挑選最符合優先送醫的傷情（時間序 13）。"
+            },
+            {
+                id: 16,
+                category: "後送優先權抉擇",
+                text: "急救區有 4 名紅色傷卡患者等待後送。其中一人傷卡內容雖為輕傷，但其身分為受傷的「消防同仁」。檢傷官應指派誰第一個後送？",
+                options: [
+                    { key: "A", text: "傷勢看起來最嚴重的那位平民" },
+                    { key: "B", text: "該名受傷的消防同仁" },
+                    { key: "C", text: "年紀最輕的平民" },
+                    { key: "D", text: "讓 4 個人抽籤決定" }
+                ],
+                ans: "B",
+                reason: "基於救災人員特殊身分原則，在同為紅色待後送群體中，應優先安排受傷的消防同仁第一個後送（時間序 13）。"
+            },
+            {
+                id: 17,
+                category: "閒置人力配置",
+                text: "當急救區只剩下 2 名傷患，但現場卻有多達 6 名 EMT 時，檢傷官應如何配置人力並進行何種回報？",
+                options: [
+                    { key: "A", text: "叫大家繼續圍在傷患旁邊，什麼事都不要做" },
+                    { key: "B", text: "直接解除所有人的職務，讓他們自行離場" },
+                    { key: "C", text: "回報指揮官是否設有休息區並開始運作，然後安排閒置人員休息" },
+                    { key: "D", text: "指派這 6 名 EMT 去幫忙消防員拉水帶" }
+                ],
+                ans: "C",
+                reason: "現場救護人力遠大於傷患需求時，檢傷官應主動確認休息區運作並「安排閒置人員休息」，調節同仁體力並回報指揮官（時間序 14）。"
+            },
+            {
+                id: 18,
+                category: "後送進度回報",
+                text: "副檢傷官向檢傷官呼叫：「傷患僅剩兩名黃區！」此時檢傷官應向「誰」回報「何種資訊」？",
+                options: [
+                    { key: "A", text: "向救護指揮官回報需要追加更多的救護車" },
+                    { key: "B", text: "向後送官回報「剩餘黃區 2 人」" },
+                    { key: "C", text: "不需要回報，靜待最後全部送完再說" },
+                    { key: "D", text: "向副檢傷官指派去搬運死者" }
+                ],
+                ans: "B",
+                reason: "當傷患即將後送完畢時，檢傷官應主動向「後送官」回報剩餘人數，以便後送車輛調配與收尾（時間序 15）。"
+            },
+            {
+                id: 19,
+                category: "終期演練回報",
+                text: "副檢傷官呼叫：「傷患都已交給後送區！」檢傷官在向指揮官回報「演練完成」之前，必須做什麼最終確認？",
+                options: [
+                    { key: "A", text: "確定救護車都開到哪家醫院了" },
+                    { key: "B", text: "確定現場所有垃圾都已清理完畢" },
+                    { key: "C", text: "確定所有傷患均已妥善安置（包括死亡者均已標示及包裹）" },
+                    { key: "D", text: "確定副檢傷官的背心已經反穿回來" }
+                ],
+                ans: "C",
+                reason: "結案回報前，檢傷官必須確認所有傷患（含死者標示、包裹安置）皆已被妥善處置，方可向指揮官回報演練完成（時間序 16）。"
+            },
+            {
+                id: 20,
+                category: "副檢傷官回報職責",
+                text: "在演練的整體生命週期中，關於「副檢傷官」對「檢傷官」的呼叫回報時機，以下何者「錯誤」？",
+                options: [
+                    { key: "A", text: "發現搬運人力不足、器材不足時，應主動向檢傷官呼叫請求調派" },
+                    { key: "B", text: "一次檢傷完畢、以及傷患全部搬運至急救區時，應呼叫回報檢傷官" },
+                    { key: "C", text: "二次檢傷發現綠區傷患惡化轉紅時，應主動向檢傷官呼叫" },
+                    { key: "D", text: "每次後送車輛開走時，副檢傷官都要直接跳過後送官，自行打電話給指揮官回報" }
+                ],
+                ans: "D",
+                reason: "後送車輛的離場通報屬於「後送官」與「指揮站」之間的通報流程，副檢傷官不應越權或編制外回報（時間序 8-12、16）。"
+            }
+        ];
+
+        // ================= 狀態變數 =================
+        let currentMode = 'teaching';
+        let currentQueue = [];
+        let currentIndex = 0;
+        let score = 0;
+        let isWaiting = false;
+
+        const viewTeaching = document.getElementById('view-teaching');
+        const viewGame = document.getElementById('view-game');
+        const cardContent = document.getElementById('card-content');
+        const feedbackArea = document.getElementById('feedback-area');
+        const progressDisplay = document.getElementById('progress');
+        const patientIdDisplay = document.getElementById('patient-id');
+        const answerButtons = document.getElementById('answer-buttons');
+        const restartBtn = document.getElementById('action-btn-restart');
+        const modeText = document.getElementById('mode-text');
+        const streakBadge = document.getElementById('streak-badge');
+
+        function getRandom(arr, count) {
+            let shuffled = [...arr].sort(() => 0.5 - Math.random());
+            return shuffled.slice(0, count);
+        }
+
+        // ================= 頁面切換 =================
+        window.switchTab = function(mode, element) {
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('nav-active'));
+            element.classList.add('nav-active');
+            viewTeaching.classList.remove('view-active');
+            viewGame.classList.remove('view-active');
+            currentMode = mode;
+
+            if (mode === 'teaching') {
+                viewTeaching.classList.add('view-active');
+                document.getElementById('main-header').querySelector('.header-title').innerText = "🚑 檢傷官任務：指南導讀";
+                streakBadge.style.display = 'none';
+            } else if (mode === 'practice') {
+                viewGame.classList.add('view-active');
+                document.getElementById('main-header').querySelector('.header-title').innerText = "🏋️ 決策練習模式";
+                streakBadge.style.display = 'none';
+                startCurrentMode();
+            } else if (mode === 'test') {
+                viewGame.classList.add('view-active');
+                document.getElementById('main-header').querySelector('.header-title').innerText = "🚨 嚴格測驗 (連續20題)";
+                streakBadge.style.display = 'inline-block';
+                startCurrentMode();
+            }
+        };
+
+        // ================= 模式啟動 =================
+        window.startCurrentMode = function() {
+            currentIndex = 0;
+            score = 0;
+            isWaiting = false;
+            streakBadge.innerText = `連對: 0/20`;
+
+            answerButtons.style.display = 'flex';
+            restartBtn.style.display = 'none';
+            restartBtn.classList.remove('action-btn-red');
+            restartBtn.innerText = "🔄 重新開始挑戰";
+
+            if (currentMode === 'practice') {
+                modeText.innerText = "🏋️ 決策練習模式 (20題・錯可看解析並繼續)";
+                modeText.style.color = "#3498db";
+                currentQueue = [...questionBank].sort(() => 0.5 - Math.random());
+            } else if (currentMode === 'test') {
+                modeText.innerText = "🚨 嚴格測驗 (連續答對20題・錯1題立即淘汰)";
+                modeText.style.color = "#e74c3c";
+                currentQueue = [...questionBank].sort(() => 0.5 - Math.random());
+            }
+
+            loadQuestion();
+        };
+
+        // ================= 題目載入 =================
+        function loadQuestion() {
+            if (currentIndex >= currentQueue.length) {
+                // 通關
+                const isTest = (currentMode === 'test');
+                cardContent.innerHTML = `
+                    <div style="text-align:center; padding: 25px 0;">
+                        <h2 style="color:${isTest ? '#d35400' : '#27ae60'}; font-size:2rem; margin:0;">
+                            ${isTest ? '🏆 神級檢傷官！20題完美通關！' : '🎉 練習模式 20 題全數完成！'}
+                        </h2>
+                        <h1 style="color:#34495e; font-size:3.2rem; margin:12px 0;">${score} / ${currentQueue.length}</h1>
+                        <p style="font-weight:bold; color:#7f8c8d; line-height:1.6;">
+                            ${isTest 
+                                ? '太神了！你在極高壓情境下 100% 精準執行了回報流程與人力物資調配，具備 MCI 第一線指揮官核心職能！' 
+                                : '你已完整複習 20 道大傷決策情境。準備好接受考驗了嗎？請切換至「嚴格測驗」挑戰一命通關！'}
+                        </p>
+                    </div>`;
+
+                patientIdDisplay.innerText = "Mission Complete";
+                answerButtons.style.display = 'none';
+                restartBtn.style.display = 'block';
+                feedbackArea.innerHTML = "演練結束，點擊上方按鈕重新測驗。";
+                feedbackArea.className = "feedback-neutral";
+                return;
+            }
+
+            const q = currentQueue[currentIndex];
+            cardContent.innerHTML = `
+                <div style="margin-bottom: 8px;">
+                    <span style="background:#eaf2f8; color:#2980b9; font-size:0.85rem; padding:3px 8px; border-radius:6px; font-weight:bold;">
+                        【${q.category}】
+                    </span>
+                </div>
+                <div style="font-size:1.15rem; font-weight:bold; line-height:1.6; color:#2c3e50;">
+                    ${q.text}
+                </div>
+            `;
+            
+            patientIdDisplay.innerText = `Case #${(currentIndex + 1).toString().padStart(2, '0')}`;
+            feedbackArea.innerHTML = "請點擊下方選項進行指揮決策。";
+            feedbackArea.className = "feedback-neutral";
+            
+            // 渲染選項
+            answerButtons.innerHTML = '';
+            q.options.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = 'opt-btn';
+                btn.innerHTML = `
+                    <span class="opt-letter">${opt.key}</span>
+                    <span style="flex:1;">${opt.text}</span>
+                `;
+                btn.onclick = () => checkAnswer(opt.key, btn);
+                answerButtons.appendChild(btn);
+            });
+
+            updateProgress();
+            isWaiting = false;
+        }
+
+        // ================= 檢查答案 =================
+        function checkAnswer(chosenKey, selectedBtn) {
+            if (isWaiting) return;
+            isWaiting = true;
+
+            const q = currentQueue[currentIndex];
+            const isCorrect = (chosenKey === q.ans);
+            const allBtns = answerButtons.querySelectorAll('.opt-btn');
+
+            allBtns.forEach(btn => {
+                btn.disabled = true;
+                const letter = btn.querySelector('.opt-letter').innerText;
+                if (letter === q.ans) {
+                    btn.classList.add('opt-correct');
+                }
+            });
+
+            if (isCorrect) {
+                score++;
+                selectedBtn.classList.add('opt-correct');
+                streakBadge.innerText = `連對: ${score}/20`;
+                feedbackArea.innerHTML = `✅ <b>決策正確！</b>(標準答案：${q.ans})<span class="analysis-text"><b>教官解析：</b>${q.reason}</span>`;
+                feedbackArea.className = "feedback-correct";
+                updateProgress();
+
+                setTimeout(() => {
+                    currentIndex++;
+                    loadQuestion();
+                }, 2000);
+
+            } else {
+                selectedBtn.classList.add('opt-incorrect');
+
+                if (currentMode === 'test') {
+                    feedbackArea.innerHTML = `☠️ <b>決策失誤！測驗淘汰！</b>正確答案應為【${q.ans}】<span class="analysis-text"><b>失誤解析：</b>${q.reason}<br><b style="color:var(--red);">⚠️ 失誤將導致現場秩序混亂，請點擊下方按鈕從第 1 題重新開始！</b></span>`;
+                    feedbackArea.className = "feedback-fatal";
+                    updateProgress();
+
+                    answerButtons.style.display = 'none';
+                    restartBtn.style.display = 'block';
+                    restartBtn.classList.add('action-btn-red');
+                    restartBtn.innerText = "🚨 淘汰！點此從第一題重測";
+                    return;
+
+                } else {
+                    feedbackArea.innerHTML = `❌ <b>決策錯誤！</b>正確應為【${q.ans}】<span class="analysis-text"><b>教官解析：</b>${q.reason}</span>`;
+                    feedbackArea.className = "feedback-incorrect";
+                    updateProgress();
+
+                    setTimeout(() => {
+                        currentIndex++;
+                        loadQuestion();
+                    }, 3800);
+                }
+            }
+        }
+
+        // ================= 更新進度 =================
+        function updateProgress() {
+            let current = Math.min(currentIndex + 1, currentQueue.length);
+            if (currentMode === 'test' && answerButtons.style.display === 'none' && currentIndex < currentQueue.length) {
+                current = currentIndex + 1;
+            }
+            progressDisplay.innerText = `進度: ${current} / ${currentQueue.length} | 答對: ${score}`;
+        }
+    </script>
+</body>
+</html>
