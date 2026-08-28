@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCI 戰情中心：後送官極限沙盤</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --panel-bg: #1e293b;
+            --red: #ef4444;
+            --yellow: #f59e0b;
+            --green: #10b981;
+            --text: #f8fafc;
+            --border: #334155;
+            --highlight: #3b82f6;
+        }
+
+        body {
+            margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif, 'Microsoft JhengHei';
+            background-color: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+        }
+
+        header {
+            background-color: #0f172a; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5); z-index: 10; border-bottom: 2px solid var(--highlight); flex-shrink: 0;
+        }
+        header h1 { margin: 0; font-size: 1.4rem; display: flex; align-items: center; gap: 10px;}
+        .top-controls { display: flex; gap: 12px; align-items: center; }
+        .top-controls select { padding: 6px; border-radius: 4px; background: #fff; border: 2px solid var(--highlight); font-weight: bold; font-size: 1rem; color: #0f172a; outline: none;}
+        .time-board { background: #1e293b; padding: 5px 15px; border-radius: 5px; border: 1px solid var(--border); font-family: monospace; font-size: 1.1rem; }
+        .time-board span { color: var(--yellow); font-weight: bold; }
+        .btn-end { background: var(--red); color: white; border: none; padding: 6px 12px; border-radius: 4px; font-weight: bold; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; font-size: 0.95rem; }
+        .btn-end:hover { filter: brightness(1.2); }
+        .btn-home { background: #0284c7; }
+
+        #main-container { display: flex; flex: 1; padding: 10px; gap: 10px; overflow: hidden; }
+        .col { background-color: var(--panel-bg); border-radius: 8px; border: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; box-shadow: inset 0 0 10px rgba(0,0,0,0.3); }
+        .col-header { background-color: #1e293b; padding: 10px; font-weight: bold; font-size: 1.1rem; border-bottom: 2px solid var(--border); flex-shrink: 0; display: flex; justify-content: space-between; align-items: center;}
+        
+        .col-triage { width: 28%; }
+        .col-staging { width: 42%; }
+        .col-hospital { width: 30%; }
+
+        #triage-list { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 15px; }
+        .triage-zone { border-radius: 6px; padding: 8px; min-height: 60px; flex-shrink: 0; display: flex; flex-direction: column; }
+        .zone-red { background: rgba(239, 68, 68, 0.15); border: 1px solid var(--red); }
+        .zone-yellow { background: rgba(245, 158, 11, 0.15); border: 1px solid var(--yellow); }
+        .zone-green { background: rgba(16, 185, 129, 0.15); border: 1px solid var(--green); }
+        .zone-title { font-weight: bold; margin-bottom: 8px; font-size: 0.95rem; flex-shrink: 0; }
+        .zone-red .zone-title { color: #fca5a5; }
+        .zone-yellow .zone-title { color: #fcd34d; }
+        .zone-green .zone-title { color: #6ee7b7; }
+        .cards-container { display: flex; flex-direction: column; gap: 8px; flex: 1; }
+
+        /* 傷情卡 */
+        .patient-card { background: #fff; color: #0f172a; padding: 8px; border-radius: 6px; cursor: grab; font-size: 0.9rem; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.3); border-left: 6px solid; user-select: none; transition: transform 0.1s; }
+        .patient-card:active { cursor: grabbing; transform: scale(0.98); }
+        .patient-card.bg-red { border-left-color: var(--red); }
+        .patient-card.bg-yellow { border-left-color: var(--yellow); }
+        .patient-card.bg-green { border-left-color: var(--green); }
+        .special-tag { display: inline-block; background: var(--red); color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; margin-top: 5px; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
+
+        #staging-col-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; padding: 10px; gap: 10px; }
+        .half-zone { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: rgba(0,0,0,0.2); border-radius: 6px; padding: 10px; border: 1px solid var(--border); }
+        .half-zone-title { font-size: 0.95rem; color: #94a3b8; margin-bottom: 10px; border-bottom: 1px solid var(--border); padding-bottom: 5px; flex-shrink: 0; }
+        .half-zone-scroll { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 5px;}
+        
+        #baleng-zone { display: flex; gap: 10px; flex-shrink: 0; margin-bottom: 5px; }
+        
+        .ambulance { background: #334155; border: 2px dashed #64748b; border-radius: 8px; padding: 8px; color: white; cursor: grab; min-height: 70px; display: flex; flex-direction: column; }
+        .ambulance:hover { border-color: var(--highlight); background: #475569;}
+        .amb-locked { opacity: 0.7; cursor: not-allowed; border: 2px solid var(--red); background: #334155; }
+        .amb-enroute { background: #1e293b; border: 1px solid var(--highlight); cursor: default; }
+        .amb-header { display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #475569; padding-bottom: 5px; margin-bottom: 5px;}
+        .amb-name { font-weight: bold; font-size: 1.05rem; }
+        .amb-slots { display: flex; flex-wrap: wrap; gap: 5px; flex: 1; min-height: 30px; background: rgba(0,0,0,0.3); border-radius: 4px; padding: 5px; align-items: center;}
+
+        #hospital-list { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 10px; }
+        .hospital { background: #f8fafc; color: #0f172a; border-radius: 8px; padding: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.3); display: flex; flex-direction: column; border: 2px solid transparent;}
+        .hosp-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;}
+        .hosp-name-box { display: flex; align-items: center; gap: 8px; }
+        .hosp-name { font-weight: bold; font-size: 1.1rem; }
+        .hosp-time { font-size: 0.8rem; background: #475569; color: white; padding: 2px 6px; border-radius: 10px; }
+        .hosp-caps { display: flex; gap: 5px; }
+        .cap-box { flex: 1; text-align: center; padding: 4px; border-radius: 4px; font-weight: bold; font-size: 0.9rem;}
+        .cap-box.r { background: #fecaca; color: #b91c1c; border: 1px solid #f87171; }
+        .cap-box.y { background: #fef08a; color: #b45309; border: 1px solid #facc15; }
+        .cap-box.g { background: #d1fae5; color: #047857; border: 1px solid #34d399; }
+        .cap-full { background: var(--red) !important; color: white !important; }
+
+        .drag-over { background-color: rgba(59, 130, 246, 0.3) !important; border-color: var(--highlight) !important; }
+
+        #toast-container { position: fixed; top: 70px; left: 50%; transform: translateX(-50%); z-index: 9999; display: flex; flex-direction: column; gap: 10px; pointer-events: none;}
+        .toast { background: var(--red); color: white; padding: 12px 20px; border-radius: 8px; font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.5); animation: slideDown 0.3s forwards, fadeOut 0.5s 3.5s forwards; }
+        .toast.info { background: var(--highlight); }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+
+        #stats-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 99999; justify-content: center; align-items: center; }
+        .modal-content { background: #f8fafc; color: #0f172a; width: 95%; max-width: 900px; max-height: 90vh; border-radius: 10px; display: flex; flex-direction: column; overflow: hidden; }
+        .modal-header { background: #1e293b; color: white; padding: 15px; font-size: 1.5rem; font-weight: bold; text-align: center; border-bottom: 4px solid var(--highlight);}
+        .modal-body { padding: 20px; overflow-y: auto; flex: 1; }
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .stats-card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border: 1px solid #cbd5e1; }
+        .stats-card h3 { color: var(--highlight); margin-top: 0; border-bottom: 2px solid #e2e8f0; padding-bottom: 5px;}
+        .log-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem;}
+        .log-table th, .log-table td { padding: 8px; border-bottom: 1px solid #cbd5e1; text-align: left; }
+        
+        .score-display { text-align: center; font-size: 4rem; font-weight: 900; color: var(--highlight); text-shadow: 2px 2px 0px #cbd5e1;}
+        .score-S { color: #f59e0b; } .score-A { color: #10b981; } .score-B { color: #3b82f6; } .score-C { color: #ef4444; }
+        
+        .metric-desc { font-size: 0.85rem; color: #64748b; display: block; padding-left: 25px; margin-top: 2px; }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>🚑 戰情中心 <span style="font-size: 1rem; color:#94a3b8; font-weight:normal;">MCI 後送沙盤 Pro</span></h1>
+        <div class="top-controls">
+            <!-- 返回大廳首頁 -->
+            <button class="btn-end btn-home" onclick="window.location.href='index.html'">🏠 回首頁</button>
+            <select id="scenario-select" onchange="restartGame()">
+                <option value="0">第 1 題：[山區] 復興落石事故 (15人)</option>
+                <option value="1">第 2 題：[山區] 巴陵中巴翻覆 (18人)</option>
+                <option value="2">第 3 題：[市區] 平鎮工廠氣爆 (18人)</option>
+                <option value="3">第 4 題：[市區] 台66連環車禍 (22人)</option>
+                <option value="4">第 5 題：[市區] 大型遊覽車翻覆 (25人)</option>
+                <option value="5">第 6 題：[市區] 宗教遶境踩踏 (28人)</option>
+                <option value="6">第 7 題：[市區] 平鎮極限大傷考驗 (30人)</option>
+            </select>
+            <button id="ff-btn" class="btn-end" style="background:#f59e0b;" onclick="toggleFastForward()">⏩ 加速 (關)</button>
+            <button class="btn-end" onclick="endMCI()">📊 結束演練 / AAR 評分</button>
+            <div class="time-board">演練時間：<span id="sys-timer">00:00</span></div>
+        </div>
+    </header>
+
+    <div id="main-container">
+        <!-- 檢傷區 -->
+        <div class="col col-triage">
+            <div class="col-header">
+                📍 待後送區
+                <span id="triage-counter" style="color:#fcd34d; font-size:0.95rem;">[累計檢傷: 0]</span>
+            </div>
+            <div id="triage-list">
+                <div class="triage-zone zone-red"><div class="zone-title">🔴 紅區 (極危急)</div><div class="cards-container" id="zone-red-cards"></div></div>
+                <div class="triage-zone zone-yellow"><div class="zone-title">🟡 黃區 (中度)</div><div class="cards-container" id="zone-yellow-cards"></div></div>
+                <div class="triage-zone zone-green"><div class="zone-title">🟢 綠區 (輕傷)</div><div class="cards-container" id="zone-green-cards"></div></div>
+            </div>
+        </div>
+
+        <!-- 集結區 -->
+        <div class="col col-staging">
+            <div class="col-header">🚑 救護車集結與勤務管制</div>
+            <div id="staging-col-content">
+                <div class="half-zone">
+                    <div class="half-zone-title">🟢 空車待命區 (將左方傷患卡拖入空車)</div>
+                    <div id="baleng-zone"></div>
+                    <div class="half-zone-scroll" id="staging-list"></div>
+                </div>
+                <div class="half-zone">
+                    <div class="half-zone-title">🔵 執行勤務中 (送醫、交接、返回)</div>
+                    <div class="half-zone-scroll" id="enroute-list"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 醫院區 -->
+        <div class="col col-hospital">
+            <div class="col-header">🏥 醫療網負載面板</div>
+            <div id="hospital-list"></div>
+        </div>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <div id="stats-modal">
+        <div class="modal-content">
+            <div class="modal-header">📊 演練結束：指揮官戰術評分 (AAR)</div>
+            <div class="modal-body">
+                <div class="stats-grid">
+                    <div class="stats-card" style="text-align: center;">
+                        <h3>🏆 綜合戰術評等</h3>
+                        <div id="aar-score" class="score-display">A</div>
+                        <p id="aar-comment" style="font-weight:bold; color:#475569; margin-top:5px;">表現優異！</p>
+                    </div>
+                    <div class="stats-card">
+                        <h3>📈 核心指標分析</h3>
+                        <ul style="line-height:1.6; font-size:1.1rem; padding-left:20px;">
+                            <li>🔴 <b>重症平均等車時間：</b> <span id="aar-red-time" style="color:var(--highlight); font-weight:bold;">0 秒</span>
+                                <span class="metric-desc">(評估紅標病患暴露於現場風險的時間，越低越好)</span>
+                            </li>
+                            <li style="margin-top:10px;">⚠️ <b>指揮官防呆違規：</b> <span id="aar-errors" style="color:var(--red); font-weight:bold;">0 次</span>
+                                <span class="metric-desc">(違反後艙醫療極限、滿載醫院或預備隊紀律的次數)</span>
+                            </li>
+                            <li style="margin-top:10px;">🏥 <b>醫療網分流狀態：</b> <span id="aar-balance">良好</span>
+                                <span class="metric-desc">(評估是否將病患過度集中於單一醫院導致急診雍塞崩潰)</span>
+                            </li>
+                            <li style="margin-top:10px;">🧑‍🤝‍🧑 <b>總疏散人數：</b> <span id="aar-total">0</span> 人</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="stats-card" style="margin-top:20px;">
+                    <h3>🏥 各責任醫院收容結算 (已收容 / 總床數)</h3>
+                    <table class="log-table">
+                        <thead><tr><th>醫院名稱</th><th>🔴 紅區</th><th>🟡 黃區</th><th>🟢 綠區</th></tr></thead>
+                        <tbody id="aar-hospital-log"></tbody>
+                    </table>
+                </div>
+
+                <div class="stats-card" style="margin-top:20px;">
+                    <h3>📝 詳細後送調度紀錄</h3>
+                    <table class="log-table">
+                        <thead><tr><th>時間</th><th>傷患編號</th><th>傷情</th><th>派遣車輛</th><th>送往醫院</th><th>耗時</th></tr></thead>
+                        <tbody id="stat-log"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer" style="padding: 15px; text-align: center; border-top: 1px solid #cbd5e1;">
+                <button class="btn-end" style="background:#334155; padding:10px 20px; font-size:1.1rem;" onclick="location.reload()">🔄 關閉並重新訓練</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const HANDOVER_REAL_MIN = 15; 
+        let sysSeconds = 0;
+        let gameInterval = null;
+        let isFastForward = false;
+        let currentLocation = 'fuxing'; // 'fuxing' 或 'pingzhen'
+        let TRAVEL_RATIO = 1; // 復興 1:1, 平鎮 1:3
+        let hasSpawnedRed = false; // 控制前線車輛觸發
+        
+        let errorCount = 0;
+        let dispatchLog = [];
+        let redWaitTimes = [];
+        let totalTriaged = 0;
+        
+        let pendingGreens = [];
+        let pendingReds = [];
+        let pendingYellows = [];
+        let activePatients = [];
+        let ambulances = [];
+        let hospitals = [];
+        
+        let tGreen = 0, tRed = 0, tYellow = 0;
+        let lastPatientNotified = false;
+
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        function unlockAudio() {
+            if(audioCtx.state === 'suspended') audioCtx.resume();
+        }
+
+        function playTone(freq, type, duration, vol=0.1) {
+            unlockAudio();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.start(); osc.stop(audioCtx.currentTime + duration);
+        }
+
+        function playError() {
+            playTone(150, 'sawtooth', 0.5, 0.2);
+            errorCount++; 
+        }
+
+        function playRadio() {
+            unlockAudio();
+            const bufferSize = audioCtx.sampleRate * 0.3;
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+            const noise = audioCtx.createBufferSource();
+            noise.buffer = buffer;
+            const gain = audioCtx.createGain();
+            gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+            noise.connect(gain); gain.connect(audioCtx.destination);
+            noise.start(); noise.stop(audioCtx.currentTime + 0.3);
+            setTimeout(() => playTone(900, 'sine', 0.1, 0.1), 300);
+        }
+
+        function playSuccess() { playTone(600, 'sine', 0.1, 0.1); }
+
+        function showToast(msg, type="error") {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = (type==="error"?"⚠️ ":"ℹ️ ") + msg;
+            container.appendChild(toast);
+            if(type === "error") playError();
+            setTimeout(() => { if(toast.parentElement) toast.remove(); }, 4000);
+        }
+
+        function toggleFastForward() {
+            isFastForward = !isFastForward;
+            let btn = document.getElementById('ff-btn');
+            btn.innerText = isFastForward ? "⏩ 加速 (開)" : "⏩ 加速 (關)";
+            btn.style.background = isFastForward ? "var(--red)" : "#f59e0b";
+            if (gameInterval) {
+                clearInterval(gameInterval);
+                gameInterval = setInterval(gameTick, isFastForward ? 100 : 1000); 
+            }
+        }
+
+        const svgHospital = `<svg viewBox="0 0 100 100" width="30" height="30" style="flex-shrink:0;"><rect x="20" y="20" width="60" height="70" fill="#e2e8f0" stroke="#94a3b8" stroke-width="4"/><rect x="40" y="35" width="20" height="20" fill="#ef4444"/><rect x="45" y="30" width="10" height="30" fill="#ef4444"/><rect x="35" y="70" width="30" height="20" fill="#334155"/></svg>`;
+        
+        function getAmbulanceSvg(type, isCommand) {
+            let color = isCommand ? '#ef4444' : (type === 'reserve' ? '#f59e0b' : '#3b82f6');
+            let flag = isCommand ? `<path d="M 5 5 L 5 20 M 5 5 L 20 10 L 5 15" stroke="#ef4444" stroke-width="2" fill="#ef4444"/><text x="22" y="12" font-size="10" fill="#ef4444" font-weight="bold">ICP</text>` : '';
+            return `<svg viewBox="0 0 100 60" width="40" height="24" style="flex-shrink:0;">${flag}<rect x="5" y="20" width="60" height="35" rx="2" fill="#ffffff" stroke="#94a3b8" stroke-width="2"/><path d="M 65 35 L 95 35 L 95 55 L 65 55 Z" fill="#ffffff" stroke="#94a3b8" stroke-width="2"/><circle cx="25" cy="55" r="8" fill="#0f172a"/><circle cx="80" cy="55" r="8" fill="#0f172a"/><rect x="5" y="45" width="60" height="6" fill="${color}"/><rect x="80" y="37" width="10" height="8" fill="#bae6fd"/><circle x="10" y="25" cx="15" cy="25" r="3" fill="#ef4444"/></svg>`;
+        }
+
+        function generatePatients(totalCount) {
+            let pts = [];
+            const rCount = Math.floor(totalCount * 0.25);
+            const yCount = Math.floor(totalCount * 0.35);
+            const gCount = totalCount - rCount - yCount;
+            
+            for(let i=0; i<rCount; i++) pts.push({ id:`P${pts.length+1}`, color:'紅', gender:i===0?'女':(Math.random()>0.5?'男':'女'), age:Math.floor(Math.random()*40)+20, special:i===0?'孕婦':'', desc:i===0?'腹部鈍傷':'重度創傷'});
+            for(let i=0; i<yCount; i++) pts.push({ id:`P${pts.length+1}`, color:'黃', gender:Math.random()>0.5?'男':'女', age:Math.floor(Math.random()*50)+10, special:'', desc:'骨折/撕裂傷' });
+            for(let i=0; i<gCount; i++) pts.push({ id:`P${pts.length+1}`, color:'綠', gender:Math.random()>0.5?'男':'女', age:Math.floor(Math.random()*60)+10, special:'', desc:'輕微擦傷可行走' });
+            return pts;
+        }
+
+        function restartGame() {
+            unlockAudio();
+            let sel = document.getElementById('scenario-select');
+            let idx = parseInt(sel.value);
+            let counts = [15, 18, 18, 22, 25, 28, 30]; 
+            let targetCount = counts[idx];
+
+            sysSeconds = 0; errorCount = 0; dispatchLog = []; redWaitTimes = []; totalTriaged = 0;
+            activePatients = [];
+            tGreen = 1; tRed = 4; tYellow = 7;
+            lastPatientNotified = false;
+            hasSpawnedRed = false; 
+            
+            let allPts = generatePatients(targetCount).sort(() => 0.5 - Math.random());
+            pendingGreens = allPts.filter(p=>p.color==='綠');
+            pendingReds = allPts.filter(p=>p.color==='紅');
+            pendingYellows = allPts.filter(p=>p.color==='黃');
+
+            // 判斷地理位置
+            if(idx < 2) {
+                currentLocation = 'fuxing';
+                TRAVEL_RATIO = 1; // 1分=1秒
+                ambulances = [
+                    { id: "A1", name: "巴陵91", type: "command", isICP: true, arrivalReal: 0, status: "waiting", payload: [] },
+                    { id: "A8", name: "巴陵92", type: "reserve", isICP: false, arrivalReal: 0, status: "waiting", payload: [] },
+                    { id: "A2", name: "復興91", type: "normal", isICP: false, arrivalReal: 999, status: "incoming", payload: [] },
+                    { id: "A3", name: "復興92", type: "normal", isICP: false, arrivalReal: 999, status: "incoming", payload: [] },
+                    { id: "A4", name: "大溪93", type: "normal", isICP: false, arrivalReal: 10, status: "incoming", payload: [] },
+                    { id: "A5", name: "圳頂95", type: "normal", isICP: false, arrivalReal: 15, status: "incoming", payload: [] },
+                    { id: "A6", name: "高平96", type: "normal", isICP: false, arrivalReal: 20, status: "incoming", payload: [] },
+                    { id: "A9", name: "八德91", type: "normal", isICP: false, arrivalReal: 25, status: "incoming", payload: [] }
+                ];
+                hospitals = [
+                    { id: "H1", name: "國軍桃園總醫院", timeReal: 40, capR: 2, capY: 4, capG: 10, remR: 2, remY: 4, remG: 10, totR: 2, totY: 4, totG: 10 },
+                    { id: "H2", name: "聖保祿醫院", timeReal: 50, capR: 1, capY: 3, capG: 10, remR: 1, remY: 3, remG: 10, totR: 1, totY: 3, totG: 10 },
+                    { id: "H3", name: "三峽恩主公醫院", timeReal: 45, capR: 1, capY: 3, capG: 10, remR: 1, remY: 3, remG: 10, totR: 1, totY: 3, totG: 10 },
+                    { id: "H4", name: "部立桃園醫院", timeReal: 60, capR: 3, capY: 5, capG: 10, remR: 3, remY: 5, remG: 10, totR: 3, totY: 5, totG: 10 },
+                    { id: "H5", name: "聯新國際醫院", timeReal: 50, capR: 2, capY: 4, capG: 10, remR: 2, remY: 4, remG: 10, totR: 2, totY: 4, totG: 10 }
+                ];
+            } else {
+                currentLocation = 'pingzhen';
+                TRAVEL_RATIO = 3; // 平鎮市區加速，1分=3秒
+                ambulances = [
+                    { id: "A1", name: "平鎮91", type: "command", isICP: true, arrivalReal: 0, status: "waiting", payload: [] },
+                    { id: "A8", name: "平鎮92", type: "reserve", isICP: false, arrivalReal: 0, status: "waiting", payload: [] },
+                    { id: "A2", name: "復旦91", type: "normal", isICP: false, arrivalReal: 0, status: "waiting", payload: [] },
+                    { id: "A4", name: "龍岡91", type: "normal", isICP: false, arrivalReal: 5, status: "incoming", payload: [] },
+                    { id: "A5", name: "中壢91", type: "normal", isICP: false, arrivalReal: 8, status: "incoming", payload: [] },
+                    { id: "A6", name: "埔心91", type: "normal", isICP: false, arrivalReal: 12, status: "incoming", payload: [] },
+                    { id: "A7", name: "內壢91", type: "normal", isICP: false, arrivalReal: 15, status: "incoming", payload: [] },
+                    { id: "A9", name: "興國91", type: "normal", isICP: false, arrivalReal: 18, status: "incoming", payload: [] }
+                ];
+                hospitals = [
+                    { id: "H1", name: "聯新國際醫院", timeReal: 10, capR: 3, capY: 5, capG: 15, remR: 3, remY: 5, remG: 15, totR: 3, totY: 5, totG: 15 },
+                    { id: "H2", name: "國軍桃園總醫院", timeReal: 15, capR: 4, capY: 6, capG: 10, remR: 4, remY: 6, remG: 10, totR: 4, totY: 6, totG: 10 },
+                    { id: "H3", name: "聖保祿醫院", timeReal: 20, capR: 2, capY: 4, capG: 10, remR: 2, remY: 4, remG: 10, totR: 2, totY: 4, totG: 10 },
+                    { id: "H4", name: "部立桃園醫院", timeReal: 25, capR: 4, capY: 6, capG: 10, remR: 4, remY: 6, remG: 10, totR: 4, totY: 6, totG: 10 },
+                    { id: "H5", name: "長庚醫院", timeReal: 35, capR: 5, capY: 8, capG: 15, remR: 5, remY: 8, remG: 15, totR: 5, totY: 8, totG: 15 },
+                    { id: "H6", name: "經國敏盛醫院", timeReal: 30, capR: 3, capY: 5, capG: 10, remR: 3, remY: 5, remG: 10, totR: 3, totY: 5, totG: 10 }
+                ];
+            }
+
+            clearInterval(gameInterval);
+            render();
+            playSuccess();
+            showToast(`[勤務啟動] 收到 ${targetCount} 名大傷通報，現場管制開始！`, "info");
+            gameInterval = setInterval(gameTick, isFastForward ? 100 : 1000);
+        }
+
+        function render() {
+            document.getElementById('triage-counter').innerText = `[累計檢傷: ${totalTriaged}]`;
+
+            let zRed = document.getElementById('zone-red-cards'); zRed.innerHTML = '';
+            let zYel = document.getElementById('zone-yellow-cards'); zYel.innerHTML = '';
+            let zGre = document.getElementById('zone-green-cards'); zGre.innerHTML = '';
+
+            activePatients.forEach(p => {
+                let card = document.createElement('div');
+                card.className = `patient-card ${p.color==='紅'?'bg-red':(p.color==='黃'?'bg-yellow':'bg-green')}`;
+                card.draggable = true;
+                card.ondragstart = (e) => { unlockAudio(); e.dataTransfer.setData('text/plain', JSON.stringify({type:'patient', id: p.id})); };
+                card.innerHTML = `<div>[${p.id}] ${p.gender} / ${p.age}歲 / ${p.color}標</div><div style="font-size:0.8rem; color:#64748b; font-weight:normal;">${p.desc}</div>${p.special ? `<span class="special-tag">${p.special}</span>` : ''}`;
+                
+                if(p.color==='紅') zRed.appendChild(card);
+                else if(p.color==='黃') zYel.appendChild(card);
+                else zGre.appendChild(card);
+            });
+
+            let balengDiv = document.getElementById('baleng-zone'); balengDiv.innerHTML = '';
+            let stagingDiv = document.getElementById('staging-list'); stagingDiv.innerHTML = '';
+            let enrouteDiv = document.getElementById('enroute-list'); enrouteDiv.innerHTML = '';
+
+            ambulances.forEach(amb => {
+                if(amb.status === 'incoming') return; 
+
+                let ambDiv = document.createElement('div');
+                ambDiv.className = 'ambulance';
+                if(amb.isICP) ambDiv.classList.add('amb-locked');
+                if(amb.status === 'en_route') ambDiv.classList.add('amb-enroute');
+                
+                if(amb.type === 'command' || amb.type === 'reserve') ambDiv.style.flex = "1";
+
+                let titleHtml = `<div class="amb-header">${getAmbulanceSvg(amb.type, amb.isICP)}<span class="amb-name">${amb.name}</span></div>`;
+                if(amb.status === 'en_route') {
+                    let elapsed = sysSeconds - amb.dispatchTime;
+                    let phaseText = "";
+                    if (elapsed < amb.travelSys) phaseText = `🚑 送往 ${amb.targetHosp} (送醫中)`;
+                    else if (elapsed < amb.travelSys + amb.handoverSys) phaseText = `🏥 ${amb.targetHosp} (到院交接中)`;
+                    else phaseText = `🔄 返回現場中`;
+
+                    titleHtml += `<div style="color:#fcd34d; font-size:0.85rem; text-align:center;">${phaseText}</div>`;
+                }
+
+                let payloadHtml = '';
+                amb.payload.forEach(p => {
+                    let cCode = p.color==='紅'?'#ef4444':(p.color==='黃'?'#f59e0b':'#10b981');
+                    payloadHtml += `<div style="background:${cCode}; color:${p.color==='黃'?'#0f172a':'#fff'}; padding:2px 6px; border-radius:4px; font-size:0.8rem; font-weight:bold;">${p.id}(${p.color})</div>`;
+                });
+
+                ambDiv.innerHTML = titleHtml + `<div class="amb-slots">${payloadHtml || '<span style="color:#64748b; font-size:0.85rem;">[ 拖拉入內 ]</span>'}</div>`;
+
+                if(amb.status === 'waiting') {
+                    ambDiv.ondragover = (e) => { e.preventDefault(); ambDiv.classList.add('drag-over'); };
+                    ambDiv.ondragleave = (e) => { ambDiv.classList.remove('drag-over'); };
+                    ambDiv.ondrop = (e) => handlePatientDrop(e, amb, ambDiv);
+                    
+                    ambDiv.draggable = true;
+                    ambDiv.ondragstart = (e) => { e.dataTransfer.setData('text/plain', JSON.stringify({type:'ambulance', id: amb.id})); };
+                    
+                    if(amb.type === 'command' || amb.type === 'reserve') balengDiv.appendChild(ambDiv);
+                    else stagingDiv.appendChild(ambDiv);
+                } else {
+                    enrouteDiv.appendChild(ambDiv);
+                }
+            });
+
+            let hospDiv = document.getElementById('hospital-list');
+            hospDiv.innerHTML = '';
+            hospitals.forEach(h => {
+                let hDiv = document.createElement('div');
+                hDiv.className = 'hospital';
+                
+                let loadRatio = (h.totR - h.remR) / h.totR;
+                if(h.remR === 0 && h.remY === 0) hDiv.style.opacity = "0.7";
+
+                hDiv.innerHTML = `
+                    <div class="hosp-header">
+                        <div class="hosp-name-box">${svgHospital}<span class="hosp-name">${h.name}</span></div>
+                        <span class="hosp-time">車程 ${h.timeReal} 分</span>
+                    </div>
+                    <div class="hosp-caps">
+                        <div class="cap-box r ${h.remR===0?'cap-full':''}"><span style="font-size:0.75rem">紅</span><br>${h.remR}/${h.totR}</div>
+                        <div class="cap-box y ${h.remY===0?'cap-full':''}"><span style="font-size:0.75rem">黃</span><br>${h.remY}/${h.totY}</div>
+                        <div class="cap-box g ${h.remG===0?'cap-full':''}"><span style="font-size:0.75rem">綠</span><br>${h.remG}/${h.totG}</div>
+                    </div>
+                `;
+
+                hDiv.ondragover = (e) => { e.preventDefault(); hDiv.classList.add('drag-over'); };
+                hDiv.ondragleave = (e) => { hDiv.classList.remove('drag-over'); };
+                hDiv.ondrop = (e) => handleAmbulanceDrop(e, h, hDiv);
+                hospDiv.appendChild(hDiv);
+            });
+        }
+
+        function handlePatientDrop(e, amb, ambDiv) {
+            e.preventDefault(); ambDiv.classList.remove('drag-over');
+            try {
+                let data = JSON.parse(e.dataTransfer.getData('text/plain'));
+                if(data.type !== 'patient') return;
+                let pIdx = activePatients.findIndex(p => p.id === data.id);
+                if(pIdx === -1) return;
+                let patient = activePatients[pIdx];
+
+                if(amb.isICP) { 
+                    showToast(`【嚴重違規】${amb.name} 為現場指揮站 (ICP)，禁止派遣！`); 
+                    return; 
+                }
+                
+                // 預備隊防呆判斷 (巴陵92 / 平鎮92)
+                if(amb.type === 'reserve') {
+                    let otherFreeAmbs = ambulances.some(a => a.type === 'normal' && a.status === 'waiting' && a.payload.length === 0);
+                    
+                    // 計算全場所有「尚未送醫」的剩餘傷患總數
+                    let sceneRed = pendingReds.length + activePatients.filter(p=>p.color==='紅').length + amb.payload.filter(p=>p.color==='紅').length;
+                    let sceneYellow = pendingYellows.length + activePatients.filter(p=>p.color==='黃').length + amb.payload.filter(p=>p.color==='黃').length;
+                    let sceneGreen = pendingGreens.length + activePatients.filter(p=>p.color==='綠').length + amb.payload.filter(p=>p.color==='綠').length;
+                    
+                    let condA = (sceneRed === 0 && sceneYellow === 0 && sceneGreen <= 4);
+                    let condB = (sceneRed === 0 && sceneGreen === 0 && sceneYellow === 1);
+                    
+                    if (otherFreeAmbs || !(condA || condB)) {
+                        showToast(`【戰術錯誤】${amb.name} 為預備隊！僅限「無其他空車」且全場待後送傷患僅剩「≤4名綠標」或「單1名黃標」時，才可作為最後掃蕩動用！`);
+                        return;
+                    }
+                }
+
+                let cR = amb.payload.filter(p => p.color === '紅').length;
+                let cY = amb.payload.filter(p => p.color === '黃').length;
+                let cG = amb.payload.filter(p => p.color === '綠').length;
+
+                if(patient.color === '紅' || patient.color === '黃') {
+                    if(cR > 0 || cY > 0) { showToast("【違反配載】後艙無法同時處置兩名重症(紅/黃)！"); return; }
+                    if(cG > 1) { showToast("【空間不足】搭載重症時，最多只能陪同一名綠標(坐側椅)！"); return; }
+                } else if(patient.color === '綠') {
+                    if(cR > 0 || cY > 0) {
+                        if(cG >= 1) { showToast("【空間不足】已有重症患者，側椅僅能容納 1 名綠標！"); return; }
+                    } else {
+                        if(cG >= 4) { showToast("【空間滿載】純輕傷後送極限為 4 名綠標！"); return; }
+                    }
+                }
+
+                playSuccess();
+                amb.payload.push(patient);
+                activePatients.splice(pIdx, 1);
+                render();
+            } catch(err) { console.error(err); }
+        }
+
+        function handleAmbulanceDrop(e, hosp, hDiv) {
+            e.preventDefault(); hDiv.classList.remove('drag-over');
+            try {
+                let data = JSON.parse(e.dataTransfer.getData('text/plain'));
+                if(data.type !== 'ambulance') return;
+                let amb = ambulances.find(a => a.id === data.id);
+                if(!amb || amb.payload.length === 0) return;
+
+                let rR = amb.payload.filter(p => p.color === '紅').length;
+                let rY = amb.payload.filter(p => p.color === '黃').length;
+                let rG = amb.payload.filter(p => p.color === '綠').length;
+
+                if(hosp.remR < rR) { showToast(`【滿載】${hosp.name} 紅區已滿，請轉送！`); return; }
+                if(hosp.remY < rY) { showToast(`【滿載】${hosp.name} 黃區已滿，請轉送！`); return; }
+                if(hosp.remG < rG) { showToast(`【滿載】${hosp.name} 綠區已滿，請轉送！`); return; }
+
+                playSuccess();
+                hosp.remR -= rR; hosp.remY -= rY; hosp.remG -= rG;
+                amb.status = 'en_route'; amb.targetHosp = hosp.name;
+                
+                let travelSys = hosp.timeReal * TRAVEL_RATIO;
+                let handoverSys = HANDOVER_REAL_MIN * TRAVEL_RATIO;
+                
+                amb.dispatchTime = sysSeconds;
+                amb.travelSys = travelSys;
+                amb.handoverSys = handoverSys;
+                amb.returnSysTime = sysSeconds + (travelSys * 2) + handoverSys;
+
+                let timeStr = `${Math.floor(sysSeconds/60).toString().padStart(2,'0')}:${(sysSeconds%60).toString().padStart(2,'0')}`;
+                amb.payload.forEach(p => {
+                    let wTime = sysSeconds - p.spawnTime;
+                    if(p.color === '紅') redWaitTimes.push(wTime);
+                    dispatchLog.push({ time: timeStr, pid: p.id, detail: `[${p.color}] ${p.desc}`, amb: amb.name, hosp: hosp.name, wTime: wTime });
+                });
+
+                showToast(`[派遣] ${amb.name} 前往 ${hosp.name}！`, "info");
+                render();
+            } catch(err) { console.error(err); }
+        }
+
+        function gameTick() {
+            sysSeconds++;
+            document.getElementById('sys-timer').innerText = `${Math.floor(sysSeconds/60).toString().padStart(2,'0')}:${(sysSeconds%60).toString().padStart(2,'0')}`;
+
+            let needsRender = false;
+
+            if (pendingGreens.length > 0) {
+                if (tGreen <= 0) {
+                    let p = pendingGreens.shift(); p.spawnTime = sysSeconds; activePatients.push(p); totalTriaged++; needsRender = true;
+                    tGreen = 1; 
+                } else tGreen--;
+            }
+
+            if (pendingGreens.length <= 3 && pendingReds.length > 0) {
+                if (tRed <= 0) {
+                    let p = pendingReds.shift(); p.spawnTime = sysSeconds; activePatients.push(p); totalTriaged++; needsRender = true;
+                    tRed = 4; 
+                    
+                    if (!hasSpawnedRed) {
+                        hasSpawnedRed = true;
+                        ambulances.forEach(amb => {
+                            if (amb.name.includes("91") || amb.name.includes("92")) {
+                                if (amb.arrivalReal === 999) {
+                                    amb.status = 'waiting';
+                                    playRadio();
+                                    showToast(`🚗 ${amb.name} 抵達現場報到！(重症尋獲，前線車就位)`, "info");
+                                }
+                            }
+                        });
+                    }
+                } else tRed--;
+            }
+
+            if (pendingReds.length <= 1 && pendingYellows.length > 0 && pendingGreens.length <= 3) {
+                if (tYellow <= 0) {
+                    let p = pendingYellows.shift(); p.spawnTime = sysSeconds; activePatients.push(p); totalTriaged++; needsRender = true;
+                    tYellow = 7; 
+                } else tYellow--;
+            }
+
+            let totalPending = pendingGreens.length + pendingReds.length + pendingYellows.length;
+            if(totalPending === 0 && !lastPatientNotified) {
+                lastPatientNotified = true;
+                showToast("【檢傷完畢】現場所有傷患皆已尋獲！預備隊解禁可用於最後掃蕩。", "info");
+            }
+
+            ambulances.forEach(amb => {
+                if(amb.status === 'incoming' && (sysSeconds/TRAVEL_RATIO) >= amb.arrivalReal) {
+                    amb.status = 'waiting'; playRadio(); showToast(`🚗 ${amb.name} 抵達現場報到！`, "info"); needsRender = true;
+                }
+                if(amb.status === 'en_route' && sysSeconds >= amb.returnSysTime) {
+                    amb.status = 'waiting'; amb.payload = []; amb.targetHosp = ''; playRadio(); showToast(`🔄 ${amb.name} 歸建！`, "info"); needsRender = true;
+                }
+                if(amb.status === 'en_route') needsRender = true; 
+            });
+
+            if(needsRender) render();
+        }
+
+        function endMCI() {
+            clearInterval(gameInterval);
+            document.getElementById('stats-modal').style.display = 'flex';
+            
+            let avgRed = redWaitTimes.length > 0 ? Math.floor(redWaitTimes.reduce((a,b)=>a+b)/redWaitTimes.length) : 0;
+            document.getElementById('aar-red-time').innerText = `${avgRed} 秒`;
+            document.getElementById('aar-errors').innerText = `${errorCount} 次`;
+            document.getElementById('aar-total').innerText = dispatchLog.length;
+
+            let loads = hospitals.map(h => (h.totR - h.remR)/h.totR);
+            let maxL = Math.max(...loads), minL = Math.min(...loads);
+            let balanceTxt = (maxL - minL > 0.5) ? "⚠️ 分流極不均 (部分塞爆)" : "✅ 負載平衡良好";
+            document.getElementById('aar-balance').innerText = balanceTxt;
+
+            let score = 'C', comment = '決策混亂，恐引發二度災難';
+            if(errorCount === 0 && avgRed <= 30) { score = 'S'; comment = '神級指揮！完美戰術調度！'; }
+            else if(errorCount <= 2 && avgRed <= 60) { score = 'A'; comment = '表現優異，成功穩住大局！'; }
+            else if(errorCount <= 5 && avgRed <= 90) { score = 'B'; comment = '勉力維持，但部分決策延誤。'; }
+            
+            let scoreDiv = document.getElementById('aar-score');
+            scoreDiv.innerText = score;
+            scoreDiv.className = `score-display score-${score}`;
+            document.getElementById('aar-comment').innerText = comment;
+
+            let hospHtml = '';
+            hospitals.forEach(h => {
+                let filledR = h.totR - h.remR;
+                let filledY = h.totY - h.remY;
+                let filledG = h.totG - h.remG;
+                hospHtml += `<tr>
+                    <td><b>${h.name}</b></td>
+                    <td style="color:${filledR>=h.totR?'var(--red)':'inherit'}">${filledR} / ${h.totR}</td>
+                    <td style="color:${filledY>=h.totY?'#d97706':'inherit'}">${filledY} / ${h.totY}</td>
+                    <td style="color:${filledG>=h.totG?'var(--green)':'inherit'}">${filledG} / ${h.totG}</td>
+                </tr>`;
+            });
+            document.getElementById('aar-hospital-log').innerHTML = hospHtml;
+
+            let logHtml = '';
+            dispatchLog.forEach(l => { logHtml += `<tr><td>${l.time}</td><td>${l.pid}</td><td>${l.detail}</td><td>${l.amb}</td><td>${l.hosp}</td><td>${l.wTime}s</td></tr>`; });
+            document.getElementById('stat-log').innerHTML = logHtml;
+        }
+
+        window.onload = function() { restartGame(); };
+    </script>
+</body>
+</html>
