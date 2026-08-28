@@ -65,6 +65,69 @@
         .mode-title { text-align: center; font-weight: bold; font-size: 1.2rem; margin-bottom: 10px; color: var(--primary); display: flex; justify-content: center; align-items: center; gap: 10px;}
         .test-mode-title { color: var(--red); }
 
+        /* 測驗 15 秒計時器樣式 */
+        .timer-container {
+            display: none;
+            background: #e2e8f0;
+            border-radius: 999px;
+            height: 10px;
+            width: 100%;
+            overflow: hidden;
+            margin-bottom: 12px;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.15);
+        }
+        .timer-bar {
+            height: 100%;
+            width: 100%;
+            background: linear-gradient(90deg, #2ecc71, #f1c40f, #e74c3c);
+            transition: width 0.1s linear;
+        }
+        .timer-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.95rem;
+            font-weight: 900;
+            padding: 3px 10px;
+            border-radius: 20px;
+            background: #fee2e2;
+            color: #ef4444;
+            border: 1px solid #fca5a5;
+        }
+        .timer-urgent {
+            animation: pulseTimer 0.6s infinite alternate;
+        }
+        @keyframes pulseTimer {
+            from { transform: scale(1); background: #fee2e2; }
+            to { transform: scale(1.08); background: #ef4444; color: #fff; }
+        }
+
+        /* 沉浸式背景音效控制器 */
+        .audio-ctrl-box {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 6px 12px;
+            margin-bottom: 10px;
+            font-size: 0.85rem;
+            color: #64748b;
+        }
+        .audio-btn {
+            background: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            padding: 4px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            color: #334155;
+            transition: 0.2s;
+        }
+        .audio-btn:hover { background: #e2e8f0; }
+        .audio-btn.active { background: #fee2e2; color: #dc2626; border-color: #f87171; }
+
         .patient-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 15px; border-left: 6px solid var(--primary); }
         .patient-card h3 { margin-top: 0; color: #34495e; border-bottom: 2px solid #ecf0f1; padding-bottom: 8px; font-size: 1.2rem; display: flex; justify-content: space-between; align-items: center; }
         .patient-tag { font-size: 0.9rem; background: #ecf0f1; padding: 3px 8px; border-radius: 12px; color: #7f8c8d; }
@@ -248,9 +311,23 @@
                 </svg>
                 <span id="mode-text">🏋️ 練習模式 (30題)</span>
             </div>
+
+            <!-- 背景音效控制列 -->
+            <div class="audio-ctrl-box" id="audio-ctrl-bar">
+                <span id="audio-status-text">🎧 實戰現場環境音：待命</span>
+                <button class="audio-btn" id="toggle-audio-btn" onclick="toggleNoiseMaster()">🔊 環境音 (開)</button>
+            </div>
+
+            <!-- 15 秒倒數進度條 -->
+            <div class="timer-container" id="timer-wrapper">
+                <div class="timer-bar" id="timer-progress"></div>
+            </div>
             
             <div class="patient-card">
-                <h3>📝 傷患資訊 <span class="patient-tag" id="patient-id">Case #01</span></h3>
+                <h3>
+                    <span>📝 傷患資訊 <span class="patient-tag" id="patient-id">Case #01</span></span>
+                    <span id="timer-display" class="timer-badge" style="display:none;"><i style="font-style:normal;">⏱️</i> <span id="sec-left">15</span>s</span>
+                </h3>
                 <div class="patient-details" id="card-content">載入中...</div>
             </div>
 
@@ -288,6 +365,297 @@
     </nav>
 
     <script>
+        // ================= 實戰音效合成引擎 (Web Audio API + Speech) =================
+        const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+        let audioContext = null;
+        let ambientNoiseEnabled = true;
+        let noiseInterval = null;
+
+        function getAudioContext() {
+            if (!audioContext) {
+                audioContext = new AudioCtxClass();
+            }
+            if (audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+            return audioContext;
+        }
+
+        // 1. 車輛長鳴喇叭聲 (Car Horn)
+        function playHornNoise() {
+            if (!ambientNoiseEnabled) return;
+            try {
+                const ctx = getAudioContext();
+                const now = ctx.currentTime;
+                const osc1 = ctx.createOscillator();
+                const osc2 = ctx.createOscillator();
+                const gain = ctx.createGain();
+
+                osc1.type = 'sawtooth';
+                osc2.type = 'sawtooth';
+                osc1.frequency.setValueAtTime(370, now);
+                osc2.frequency.setValueAtTime(440, now);
+
+                gain.gain.setValueAtTime(0.06, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
+
+                osc1.connect(gain);
+                osc2.connect(gain);
+                gain.connect(ctx.destination);
+
+                osc1.start(now);
+                osc2.start(now);
+                osc1.stop(now + 1.2);
+                updateAudioStatus("📢 [現場干擾] 遠處車輛持續鳴按喇叭！");
+            } catch(e){}
+        }
+
+        // 2. 警笛救護車警鳴 (EMS Siren)
+        function playSirenNoise() {
+            if (!ambientNoiseEnabled) return;
+            try {
+                const ctx = getAudioContext();
+                const now = ctx.currentTime;
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+
+                osc.type = 'sine';
+                // 警笛上下掃頻
+                osc.frequency.setValueAtTime(650, now);
+                osc.frequency.linearRampToValueAtTime(950, now + 0.6);
+                osc.frequency.linearRampToValueAtTime(650, now + 1.2);
+                osc.frequency.linearRampToValueAtTime(950, now + 1.8);
+
+                gain.gain.setValueAtTime(0.08, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 2.2);
+
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+
+                osc.start(now);
+                osc.stop(now + 2.2);
+                updateAudioStatus("🚨 [現場干擾] 後方救護警鳴聲呼嘯而過！");
+            } catch(e){}
+        }
+
+        // 3. 消防車專屬警鳴與重低音氣笛 (Fire Engine Siren & Air Horn)
+        function playFireTruckSiren() {
+            if (!ambientNoiseEnabled) return;
+            try {
+                const ctx = getAudioContext();
+                const now = ctx.currentTime;
+
+                // 消防重型氣笛 (Air Horn: 雙頻交錯低音)
+                const hornOsc1 = ctx.createOscillator();
+                const hornOsc2 = ctx.createOscillator();
+                const hornGain = ctx.createGain();
+
+                hornOsc1.type = 'sawtooth';
+                hornOsc2.type = 'square';
+                hornOsc1.frequency.setValueAtTime(220, now); // A3 低頻
+                hornOsc2.frequency.setValueAtTime(330, now); // E4 協音
+
+                hornGain.gain.setValueAtTime(0.09, now);
+                hornGain.gain.setValueAtTime(0.09, now + 0.6);
+                hornGain.gain.exponentialRampToValueAtTime(0.001, now + 1.4);
+
+                hornOsc1.connect(hornGain);
+                hornOsc2.connect(hornGain);
+                hornGain.connect(ctx.destination);
+
+                hornOsc1.start(now);
+                hornOsc2.start(now);
+                hornOsc1.stop(now + 1.4);
+                hornOsc2.stop(now + 1.4);
+
+                // 消防車長鳴低轉高警笛 (Wail Siren)
+                const wailOsc = ctx.createOscillator();
+                const wailGain = ctx.createGain();
+                wailOsc.type = 'sawtooth';
+                wailOsc.frequency.setValueAtTime(400, now + 0.3);
+                wailOsc.frequency.linearRampToValueAtTime(850, now + 1.5);
+                wailOsc.frequency.linearRampToValueAtTime(450, now + 2.6);
+
+                wailGain.gain.setValueAtTime(0.001, now);
+                wailGain.gain.linearRampToValueAtTime(0.07, now + 0.4);
+                wailGain.gain.exponentialRampToValueAtTime(0.001, now + 2.8);
+
+                wailOsc.connect(wailGain);
+                wailGain.connect(ctx.destination);
+
+                wailOsc.start(now + 0.3);
+                wailOsc.stop(now + 2.8);
+
+                updateAudioStatus("🚒 [現場干擾] 消防車重型氣笛與警鳴馳援抵達！");
+            } catch(e){}
+        }
+
+        // 取得系統中最佳的溫柔女性/中文女聲
+        function getSweetFemaleVoice() {
+            if (!('speechSynthesis' in window)) return null;
+            const voices = window.speechSynthesis.getVoices();
+            if (!voices || voices.length === 0) return null;
+            
+            // 優先挑選微軟/Google/蘋果最甜美細緻的台灣/中文女聲
+            const sweetKeywords = ['HsiaoChen', 'HsiaoYu', 'HanHan', 'Yating', 'Mei-Jia', 'Ting-Ting', 'Google 國語', 'Xiaoxiao', 'Xiaoyi', 'Zhiwei', 'Siri', 'Sin-ji'];
+            for (let kw of sweetKeywords) {
+                const found = voices.find(v => v.name.toLowerCase().includes(kw.toLowerCase()) && (v.lang.includes('zh') || v.lang.includes('cmn')));
+                if (found) return found;
+            }
+            // 次選：任何繁體中文 / 台灣女聲
+            const zhTw = voices.find(v => v.lang === 'zh-TW' || v.lang === 'zh-HK' || v.lang === 'zh_TW');
+            if (zhTw) return zhTw;
+            
+            // 兜底：任一中文語系
+            return voices.find(v => v.lang.startsWith('zh')) || null;
+        }
+
+        // 4. 溫柔甜美女性喊救命聲 (支援自訂真人 MP3 音檔 + 語音合成備援)
+        const realFemaleAudioFiles = [
+            'female_help1.mp3',
+            'female_help2.mp3',
+            'female_help3.mp3'
+        ];
+
+        function playFemaleHelpNoise() {
+            if (!ambientNoiseEnabled) return;
+            
+            // 優先嘗試播放您上傳至 GitHub 的真人 MP3 音檔
+            const randFile = realFemaleAudioFiles[Math.floor(Math.random() * realFemaleAudioFiles.length)];
+            const audioObj = new Audio(randFile);
+            audioObj.volume = 0.9;
+
+            let playPromise = audioObj.play();
+            if (playPromise !== undefined) {
+                playPromise.then(() => {
+                    updateAudioStatus("🌸 [傷患干擾] 甜美女聲真人呼救中（播放自訂音檔）");
+                }).catch(() => {
+                    // 若尚未上傳真人音檔或載入失敗，自動啟動甜美女聲語音合成作為備援
+                    playFemaleVoiceSynthesisFallback();
+                });
+            } else {
+                playFemaleVoiceSynthesisFallback();
+            }
+        }
+
+        function playFemaleVoiceSynthesisFallback() {
+            try {
+                if ('speechSynthesis' in window) {
+                    window.speechSynthesis.cancel();
+                    const phrases = [
+                        "檢傷官哥哥... 拜託救救我好不好... 我真的好痛喔...",
+                        "檢傷官先生... 請幫幫我... 拜託您了...",
+                        "嗚嗚... 有人可以救救我嗎... 我好害怕喔...",
+                        "救護員大哥... 拜託先救救我們好不好... 好痛喔..."
+                    ];
+                    const text = phrases[Math.floor(Math.random() * phrases.length)];
+                    const utter = new SpeechSynthesisUtterance(text);
+                    utter.lang = 'zh-TW';
+                    
+                    const sweetVoice = getSweetFemaleVoice();
+                    if (sweetVoice) {
+                        utter.voice = sweetVoice;
+                    }
+                    
+                    utter.pitch = 1.42;
+                    utter.rate = 0.88;
+                    utter.volume = 0.85;
+                    
+                    window.speechSynthesis.speak(utter);
+                    updateAudioStatus("🌸 [傷患干擾] 溫柔甜美女性微弱呼救：「" + text + "」");
+                }
+            } catch(e){}
+        }
+
+        // 5. 無線電呼叫檢傷官 (Radio Dispatcher Chatter)
+        function playRadioChatterNoise() {
+            if (!ambientNoiseEnabled) return;
+            try {
+                const ctx = getAudioContext();
+                // 無線電白噪音開頭 (Squelch)
+                const bufferSize = ctx.sampleRate * 0.15;
+                const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+
+                const noise = ctx.createBufferSource();
+                noise.buffer = buffer;
+                const gain = ctx.createGain();
+                gain.gain.setValueAtTime(0.08, ctx.currentTime);
+                noise.connect(gain);
+                gain.connect(ctx.destination);
+                noise.start();
+
+                setTimeout(() => {
+                    if ('speechSynthesis' in window && ambientNoiseEnabled) {
+                        const radioPhrases = [
+                            "指揮站呼叫檢傷官，請回報目前傷情！",
+                            "檢傷官請注意，後送通道已建立完畢！",
+                            "指揮站呼叫，請迅速確認第一批紅標人數！"
+                        ];
+                        const text = radioPhrases[Math.floor(Math.random() * radioPhrases.length)];
+                        const utter = new SpeechSynthesisUtterance(text);
+                        utter.lang = 'zh-TW';
+                        utter.pitch = 0.85;
+                        utter.rate = 1.1;
+                        utter.volume = 0.85;
+                        window.speechSynthesis.speak(utter);
+                        updateAudioStatus("📻 [無線電呼叫] 指揮站：「" + text + "」");
+                    }
+                }, 150);
+            } catch(e){}
+        }
+
+        // 隨機背景干擾調度器 (納入消防車警笛與真人音檔)
+        function triggerRandomNoise() {
+            if (!ambientNoiseEnabled) return;
+            const effects = [playHornNoise, playSirenNoise, playFireTruckSiren, playFemaleHelpNoise, playRadioChatterNoise];
+            const randEffect = effects[Math.floor(Math.random() * effects.length)];
+            randEffect();
+        }
+
+        function startAmbientNoiseLoop() {
+            stopAmbientNoiseLoop();
+            // 每 5 ~ 8 秒隨機觸發一次逼真現場干擾
+            noiseInterval = setInterval(() => {
+                triggerRandomNoise();
+            }, 6000);
+            // 立即觸發一次無線電建立臨場感
+            setTimeout(playRadioChatterNoise, 1200);
+        }
+
+        function stopAmbientNoiseLoop() {
+            if (noiseInterval) {
+                clearInterval(noiseInterval);
+                noiseInterval = null;
+            }
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+            }
+            updateAudioStatus("🎧 實戰現場環境音：已暫停");
+        }
+
+        function toggleNoiseMaster() {
+            ambientNoiseEnabled = !ambientNoiseEnabled;
+            const btn = document.getElementById('toggle-audio-btn');
+            if (ambientNoiseEnabled) {
+                btn.innerText = "🔊 環境音 (開)";
+                btn.classList.remove('active');
+                if (currentMode === 'test' || currentMode === 'practice') {
+                    startAmbientNoiseLoop();
+                }
+            } else {
+                btn.innerText = "🔇 環境音 (靜音)";
+                btn.classList.add('active');
+                stopAmbientNoiseLoop();
+            }
+        }
+
+        function updateAudioStatus(msg) {
+            const el = document.getElementById('audio-status-text');
+            if (el) el.innerText = msg;
+        }
+
         // ================= 互動式教學邏輯 =================
         function nextStep(stepId) {
             document.querySelectorAll('.interactive-step').forEach(el => el.classList.remove('interactive-active'));
@@ -363,6 +731,11 @@
         let score = 0;
         let isWaiting = false;
 
+        // 15 秒計時變數
+        const QUESTION_TIME_LIMIT = 15;
+        let timeLeft = QUESTION_TIME_LIMIT;
+        let timerInterval = null;
+
         const viewTeaching = document.getElementById('view-teaching');
         const viewGame = document.getElementById('view-game');
         const cardContent = document.getElementById('card-content');
@@ -372,6 +745,10 @@
         const answerButtons = document.getElementById('answer-buttons');
         const restartBtn = document.getElementById('action-btn-restart');
         const modeText = document.getElementById('mode-text');
+        const timerWrapper = document.getElementById('timer-wrapper');
+        const timerProgress = document.getElementById('timer-progress');
+        const timerDisplay = document.getElementById('timer-display');
+        const secLeftDisplay = document.getElementById('sec-left');
 
         function getRandom(arr, count) {
             let shuffled = [...arr].sort(() => 0.5 - Math.random());
@@ -384,6 +761,8 @@
             viewTeaching.classList.remove('view-active');
             viewGame.classList.remove('view-active');
             currentMode = mode;
+            stopQuestionTimer();
+            stopAmbientNoiseLoop();
 
             if (mode === 'teaching') {
                 viewTeaching.classList.add('view-active');
@@ -394,13 +773,14 @@
                 startCurrentMode();
             } else if (mode === 'test') {
                 viewGame.classList.add('view-active');
-                document.getElementById('main-header').innerText = "🚨 嚴格測驗";
+                document.getElementById('main-header').innerText = "🚨 嚴格測驗 (每題限15秒)";
                 startCurrentMode();
             }
         };
 
         window.startCurrentMode = function() {
             currentIndex = 0; score = 0; isWaiting = false;
+            stopQuestionTimer();
             answerButtons.style.display = 'grid';
             restartBtn.style.display = 'none';
             restartBtn.classList.remove('action-btn-red');
@@ -408,13 +788,18 @@
             Array.from(answerButtons.children).forEach(btn => btn.style.opacity = '1');
 
             if (currentMode === 'practice') {
-                modeText.innerText = "🏋️ 練習模式 (30題)";
+                modeText.innerText = "🏋️ 練習模式 (30題・無時間限制)";
                 modeText.style.color = "#3498db";
+                timerWrapper.style.display = 'none';
+                timerDisplay.style.display = 'none';
                 let count = Math.min(30, allQuestions.length);
                 currentQueue = getRandom(allQuestions, count);
+                if (ambientNoiseEnabled) startAmbientNoiseLoop();
             } else if (currentMode === 'test') {
-                modeText.innerText = "🚨 嚴格淘汰測驗";
+                modeText.innerText = "🚨 嚴格淘汰測驗 (每題限時15秒・錯1題或超時即淘汰)";
                 modeText.style.color = "#e74c3c";
+                timerWrapper.style.display = 'block';
+                timerDisplay.style.display = 'inline-flex';
                 
                 let qBlackSpecial = getRandom(pools.blackSpecial, 2);
                 let qBlackNormal = getRandom(pools.blackNormal, 1);
@@ -425,13 +810,68 @@
 
                 currentQueue = [...qBlackSpecial, ...qBlackNormal, ...qRedSpecial, ...qRedNormal, ...qYellow, ...qGreen];
                 currentQueue = currentQueue.sort(() => 0.5 - Math.random());
+                if (ambientNoiseEnabled) startAmbientNoiseLoop();
             }
             loadQuestion();
         };
 
+        function startQuestionTimer() {
+            stopQuestionTimer();
+            if (currentMode !== 'test') return;
+
+            timeLeft = QUESTION_TIME_LIMIT;
+            secLeftDisplay.innerText = timeLeft;
+            timerProgress.style.width = '100%';
+            timerDisplay.classList.remove('timer-urgent');
+
+            timerInterval = setInterval(() => {
+                timeLeft -= 0.1;
+                const percentage = Math.max(0, (timeLeft / QUESTION_TIME_LIMIT) * 100);
+                timerProgress.style.width = percentage + '%';
+                
+                const integerSec = Math.max(0, Math.ceil(timeLeft));
+                secLeftDisplay.innerText = integerSec;
+
+                if (timeLeft <= 4) {
+                    timerDisplay.classList.add('timer-urgent');
+                }
+
+                if (timeLeft <= 0) {
+                    stopQuestionTimer();
+                    handleTimeout();
+                }
+            }, 100);
+        }
+
+        function stopQuestionTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+        }
+
+        function handleTimeout() {
+            if (isWaiting) return;
+            isWaiting = true;
+            stopAmbientNoiseLoop();
+            Array.from(answerButtons.children).forEach(btn => btn.style.opacity = '0.4');
+
+            const q = currentQueue[currentIndex];
+            feedbackArea.innerHTML = `⌛ <b>評估超時淘汰！這是一條人命啊教官！(超過15秒)</b><br>正確應為「${q.ans}標」。<span class="analysis-text"><b>教官解析：</b>${q.reason}<br><b style="color:#dc2626;">⚠️ START 檢傷要求快速決策，超時視同放棄搶救，請點擊下方重測！</b></span>`;
+            feedbackArea.className = "feedback-fatal";
+            updateProgress();
+
+            answerButtons.style.display = 'none';
+            restartBtn.style.display = 'block';
+            restartBtn.classList.add('action-btn-red');
+            restartBtn.innerText = "🚨 超時淘汰！點此從第一題重測";
+        }
+
         function loadQuestion() {
             if (currentIndex >= currentQueue.length) {
-                cardContent.innerHTML = `<div style="text-align:center; padding: 20px 0;"><h2 style="color:#27ae60; font-size:2rem; margin:0;">🎉 演練完成！</h2><h1 style="color:#34495e; font-size:3rem; margin:10px 0;">${score} / ${currentQueue.length}</h1><p style="font-weight:bold; color:#7f8c8d;">太神啦教官！傷患精準分類完畢！</p></div>`;
+                stopQuestionTimer();
+                stopAmbientNoiseLoop();
+                cardContent.innerHTML = `<div style="text-align:center; padding: 20px 0;"><h2 style="color:#27ae60; font-size:2rem; margin:0;">🎉 演練完成！</h2><h1 style="color:#34495e; font-size:3rem; margin:10px 0;">${score} / ${currentQueue.length}</h1><p style="font-weight:bold; color:#7f8c8d;">太神啦教官！在嚴格限時與噪音干擾下精準分類完畢！</p></div>`;
                 patientIdDisplay.innerText = "Mission Complete";
                 answerButtons.style.display = 'none';
                 restartBtn.style.display = 'block';
@@ -443,16 +883,22 @@
             const q = currentQueue[currentIndex];
             cardContent.innerHTML = q.desc;
             patientIdDisplay.innerText = `Case #${(currentIndex + 1).toString().padStart(2, '0')}`;
-            feedbackArea.innerHTML = "請點擊下方按鈕判斷。";
+            feedbackArea.innerHTML = currentMode === 'test' ? "⏱️ 15 秒倒數中！請迅速點擊下方按鈕判斷。" : "請點擊下方按鈕判斷。";
             feedbackArea.className = "feedback-neutral";
             updateProgress();
             isWaiting = false;
             Array.from(answerButtons.children).forEach(btn => btn.style.opacity = '1');
+
+            // 啟動每題 15 秒計時
+            if (currentMode === 'test') {
+                startQuestionTimer();
+            }
         }
 
         window.checkAnswer = function(userChoice) {
             if (isWaiting) return;
             isWaiting = true;
+            stopQuestionTimer();
             Array.from(answerButtons.children).forEach(btn => btn.style.opacity = '0.6');
 
             const q = currentQueue[currentIndex];
@@ -467,7 +913,8 @@
                 setTimeout(() => { currentIndex++; loadQuestion(); }, 1500);
             } else {
                 if (currentMode === 'test') {
-                    feedbackArea.innerHTML = `☠️ <b>測驗淘汰！這是一條人命啊教官！</b><br>正確應為「${q.ans}標」。<span class="analysis-text"><b>失誤解析：</b>${q.reason}</span>`;
+                    stopAmbientNoiseLoop();
+                    feedbackArea.innerHTML = `☠️ <b>測驗淘汰！這是一條人命啊教官！</b><br>正確應為「${q.ans}標」。<span class="analysis-text"><b>失誤解析：</b>${q.reason}<br><b style="color:#dc2626;">⚠️ 判斷失誤將導致危急傷患延誤送醫，請點擊下方按鈕從第一題重測！</b></span>`;
                     feedbackArea.className = "feedback-fatal";
                     updateProgress();
                     answerButtons.style.display = 'none';
