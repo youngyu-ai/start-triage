@@ -381,9 +381,24 @@
             return audioContext;
         }
 
-        // 1. 車輛長鳴喇叭聲 (Car Horn)
+        // 1. 車輛長鳴喇叭聲 (支援真實 MP3 + 震盪器備援)
         function playHornNoise() {
             if (!ambientNoiseEnabled) return;
+            const hornAudio = new Audio('car_horn.mp3');
+            hornAudio.volume = 0.8;
+            let playPromise = hornAudio.play();
+            if (playPromise !== undefined) {
+                playPromise.then(() => {
+                    updateAudioStatus("📢 [現場干擾] 遠處車輛持續鳴按喇叭！(播放真實音檔)");
+                }).catch(() => {
+                    playHornSynthFallback();
+                });
+            } else {
+                playHornSynthFallback();
+            }
+        }
+
+        function playHornSynthFallback() {
             try {
                 const ctx = getAudioContext();
                 const now = ctx.currentTime;
@@ -410,9 +425,24 @@
             } catch(e){}
         }
 
-        // 2. 警笛救護車警鳴 (EMS Siren)
+        // 2. 警笛救護車警鳴 (支援真實 MP3 + 掃頻備援)
         function playSirenNoise() {
             if (!ambientNoiseEnabled) return;
+            const ambAudio = new Audio('ambulance_siren.mp3');
+            ambAudio.volume = 0.85;
+            let playPromise = ambAudio.play();
+            if (playPromise !== undefined) {
+                playPromise.then(() => {
+                    updateAudioStatus("🚨 [現場干擾] 救護車警鳴呼嘯而過！(播放真實音檔)");
+                }).catch(() => {
+                    playAmbulanceSynthFallback();
+                });
+            } else {
+                playAmbulanceSynthFallback();
+            }
+        }
+
+        function playAmbulanceSynthFallback() {
             try {
                 const ctx = getAudioContext();
                 const now = ctx.currentTime;
@@ -420,7 +450,6 @@
                 const gain = ctx.createGain();
 
                 osc.type = 'sine';
-                // 警笛上下掃頻
                 osc.frequency.setValueAtTime(650, now);
                 osc.frequency.linearRampToValueAtTime(950, now + 0.6);
                 osc.frequency.linearRampToValueAtTime(650, now + 1.2);
@@ -438,22 +467,37 @@
             } catch(e){}
         }
 
-        // 3. 消防車專屬警鳴與重低音氣笛 (Fire Engine Siren & Air Horn)
+        // 3. 消防車專屬警鳴與重低音氣笛 (支援真實 MP3 + 合成備援)
         function playFireTruckSiren() {
             if (!ambientNoiseEnabled) return;
+            const fireAudio = new Audio('firetruck_siren.mp3');
+            fireAudio.volume = 0.9;
+            let playPromise = fireAudio.play();
+            if (playPromise !== undefined) {
+                playPromise.then(() => {
+                    updateAudioStatus("🚒 [現場干擾] 消防車警笛與氣笛馳援！(播放真實音檔)");
+                }).catch(() => {
+                    playFireTruckSynthFallback();
+                });
+            } else {
+                playFireTruckSynthFallback();
+            }
+        }
+
+        function playFireTruckSynthFallback() {
             try {
                 const ctx = getAudioContext();
                 const now = ctx.currentTime;
 
-                // 消防重型氣笛 (Air Horn: 雙頻交錯低音)
+                // 消防重型氣笛
                 const hornOsc1 = ctx.createOscillator();
                 const hornOsc2 = ctx.createOscillator();
                 const hornGain = ctx.createGain();
 
                 hornOsc1.type = 'sawtooth';
                 hornOsc2.type = 'square';
-                hornOsc1.frequency.setValueAtTime(220, now); // A3 低頻
-                hornOsc2.frequency.setValueAtTime(330, now); // E4 協音
+                hornOsc1.frequency.setValueAtTime(220, now);
+                hornOsc2.frequency.setValueAtTime(330, now);
 
                 hornGain.gain.setValueAtTime(0.09, now);
                 hornGain.gain.setValueAtTime(0.09, now + 0.6);
@@ -468,7 +512,7 @@
                 hornOsc1.stop(now + 1.4);
                 hornOsc2.stop(now + 1.4);
 
-                // 消防車長鳴低轉高警笛 (Wail Siren)
+                // 消防車長鳴 Wail Siren
                 const wailOsc = ctx.createOscillator();
                 const wailGain = ctx.createGain();
                 wailOsc.type = 'sawtooth';
